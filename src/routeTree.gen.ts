@@ -15,6 +15,13 @@ import { Route as LoginRouteImport } from './routes/login'
 import { Route as AppRouteImport } from './routes/app'
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as AppIndexRouteImport } from './routes/app.index'
+import { Route as AppServicosRouteImport } from './routes/app.servicos'
+import { Route as AppFinanceiroRouteImport } from './routes/app.financeiro'
+import { Route as AppFidelidadeRouteImport } from './routes/app.fidelidade'
+import { Route as AppConfiguracoesRouteImport } from './routes/app.configuracoes'
+import { Route as AppClientesRouteImport } from './routes/app.clientes'
+import { Route as AppBarbeirosRouteImport } from './routes/app.barbeiros'
+import { Route as AppAssinaturaRouteImport } from './routes/app.assinatura'
 import { Route as AppAgendaRouteImport } from './routes/app.agenda'
 
 const SignupRoute = SignupRouteImport.update({
@@ -47,6 +54,41 @@ const AppIndexRoute = AppIndexRouteImport.update({
   path: '/',
   getParentRoute: () => AppRoute,
 } as any)
+const AppServicosRoute = AppServicosRouteImport.update({
+  id: '/servicos',
+  path: '/servicos',
+  getParentRoute: () => AppRoute,
+} as any)
+const AppFinanceiroRoute = AppFinanceiroRouteImport.update({
+  id: '/financeiro',
+  path: '/financeiro',
+  getParentRoute: () => AppRoute,
+} as any)
+const AppFidelidadeRoute = AppFidelidadeRouteImport.update({
+  id: '/fidelidade',
+  path: '/fidelidade',
+  getParentRoute: () => AppRoute,
+} as any)
+const AppConfiguracoesRoute = AppConfiguracoesRouteImport.update({
+  id: '/configuracoes',
+  path: '/configuracoes',
+  getParentRoute: () => AppRoute,
+} as any)
+const AppClientesRoute = AppClientesRouteImport.update({
+  id: '/clientes',
+  path: '/clientes',
+  getParentRoute: () => AppRoute,
+} as any)
+const AppBarbeirosRoute = AppBarbeirosRouteImport.update({
+  id: '/barbeiros',
+  path: '/barbeiros',
+  getParentRoute: () => AppRoute,
+} as any)
+const AppAssinaturaRoute = AppAssinaturaRouteImport.update({
+  id: '/assinatura',
+  path: '/assinatura',
+  getParentRoute: () => AppRoute,
+} as any)
 const AppAgendaRoute = AppAgendaRouteImport.update({
   id: '/agenda',
   path: '/agenda',
@@ -60,6 +102,13 @@ export interface FileRoutesByFullPath {
   '/onboarding': typeof OnboardingRoute
   '/signup': typeof SignupRoute
   '/app/agenda': typeof AppAgendaRoute
+  '/app/assinatura': typeof AppAssinaturaRoute
+  '/app/barbeiros': typeof AppBarbeirosRoute
+  '/app/clientes': typeof AppClientesRoute
+  '/app/configuracoes': typeof AppConfiguracoesRoute
+  '/app/fidelidade': typeof AppFidelidadeRoute
+  '/app/financeiro': typeof AppFinanceiroRoute
+  '/app/servicos': typeof AppServicosRoute
   '/app/': typeof AppIndexRoute
 }
 export interface FileRoutesByTo {
@@ -68,6 +117,13 @@ export interface FileRoutesByTo {
   '/onboarding': typeof OnboardingRoute
   '/signup': typeof SignupRoute
   '/app/agenda': typeof AppAgendaRoute
+  '/app/assinatura': typeof AppAssinaturaRoute
+  '/app/barbeiros': typeof AppBarbeirosRoute
+  '/app/clientes': typeof AppClientesRoute
+  '/app/configuracoes': typeof AppConfiguracoesRoute
+  '/app/fidelidade': typeof AppFidelidadeRoute
+  '/app/financeiro': typeof AppFinanceiroRoute
+  '/app/servicos': typeof AppServicosRoute
   '/app': typeof AppIndexRoute
 }
 export interface FileRoutesById {
@@ -78,6 +134,13 @@ export interface FileRoutesById {
   '/onboarding': typeof OnboardingRoute
   '/signup': typeof SignupRoute
   '/app/agenda': typeof AppAgendaRoute
+  '/app/assinatura': typeof AppAssinaturaRoute
+  '/app/barbeiros': typeof AppBarbeirosRoute
+  '/app/clientes': typeof AppClientesRoute
+  '/app/configuracoes': typeof AppConfiguracoesRoute
+  '/app/fidelidade': typeof AppFidelidadeRoute
+  '/app/financeiro': typeof AppFinanceiroRoute
+  '/app/servicos': typeof AppServicosRoute
   '/app/': typeof AppIndexRoute
 }
 export interface FileRouteTypes {
@@ -89,9 +152,29 @@ export interface FileRouteTypes {
     | '/onboarding'
     | '/signup'
     | '/app/agenda'
+    | '/app/assinatura'
+    | '/app/barbeiros'
+    | '/app/clientes'
+    | '/app/configuracoes'
+    | '/app/fidelidade'
+    | '/app/financeiro'
+    | '/app/servicos'
     | '/app/'
   fileRoutesByTo: FileRoutesByTo
-  to: '/' | '/login' | '/onboarding' | '/signup' | '/app/agenda' | '/app'
+  to:
+    | '/'
+    | '/login'
+    | '/onboarding'
+    | '/signup'
+    | '/app/agenda'
+    | '/app/assinatura'
+    | '/app/barbeiros'
+    | '/app/clientes'
+    | '/app/configuracoes'
+    | '/app/fidelidade'
+    | '/app/financeiro'
+    | '/app/servicos'
+    | '/app'
   id:
     | '__root__'
     | '/'
@@ -100,6 +183,13 @@ export interface FileRouteTypes {
     | '/onboarding'
     | '/signup'
     | '/app/agenda'
+    | '/app/assinatura'
+    | '/app/barbeiros'
+    | '/app/clientes'
+    | '/app/configuracoes'
+    | '/app/fidelidade'
+    | '/app/financeiro'
+    | '/app/servicos'
     | '/app/'
   fileRoutesById: FileRoutesById
 }
@@ -155,6 +245,55 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AppIndexRouteImport
       parentRoute: typeof AppRoute
     }
+    '/app/servicos': {
+      id: '/app/servicos'
+      path: '/servicos'
+      fullPath: '/app/servicos'
+      preLoaderRoute: typeof AppServicosRouteImport
+      parentRoute: typeof AppRoute
+    }
+    '/app/financeiro': {
+      id: '/app/financeiro'
+      path: '/financeiro'
+      fullPath: '/app/financeiro'
+      preLoaderRoute: typeof AppFinanceiroRouteImport
+      parentRoute: typeof AppRoute
+    }
+    '/app/fidelidade': {
+      id: '/app/fidelidade'
+      path: '/fidelidade'
+      fullPath: '/app/fidelidade'
+      preLoaderRoute: typeof AppFidelidadeRouteImport
+      parentRoute: typeof AppRoute
+    }
+    '/app/configuracoes': {
+      id: '/app/configuracoes'
+      path: '/configuracoes'
+      fullPath: '/app/configuracoes'
+      preLoaderRoute: typeof AppConfiguracoesRouteImport
+      parentRoute: typeof AppRoute
+    }
+    '/app/clientes': {
+      id: '/app/clientes'
+      path: '/clientes'
+      fullPath: '/app/clientes'
+      preLoaderRoute: typeof AppClientesRouteImport
+      parentRoute: typeof AppRoute
+    }
+    '/app/barbeiros': {
+      id: '/app/barbeiros'
+      path: '/barbeiros'
+      fullPath: '/app/barbeiros'
+      preLoaderRoute: typeof AppBarbeirosRouteImport
+      parentRoute: typeof AppRoute
+    }
+    '/app/assinatura': {
+      id: '/app/assinatura'
+      path: '/assinatura'
+      fullPath: '/app/assinatura'
+      preLoaderRoute: typeof AppAssinaturaRouteImport
+      parentRoute: typeof AppRoute
+    }
     '/app/agenda': {
       id: '/app/agenda'
       path: '/agenda'
@@ -167,11 +306,25 @@ declare module '@tanstack/react-router' {
 
 interface AppRouteChildren {
   AppAgendaRoute: typeof AppAgendaRoute
+  AppAssinaturaRoute: typeof AppAssinaturaRoute
+  AppBarbeirosRoute: typeof AppBarbeirosRoute
+  AppClientesRoute: typeof AppClientesRoute
+  AppConfiguracoesRoute: typeof AppConfiguracoesRoute
+  AppFidelidadeRoute: typeof AppFidelidadeRoute
+  AppFinanceiroRoute: typeof AppFinanceiroRoute
+  AppServicosRoute: typeof AppServicosRoute
   AppIndexRoute: typeof AppIndexRoute
 }
 
 const AppRouteChildren: AppRouteChildren = {
   AppAgendaRoute: AppAgendaRoute,
+  AppAssinaturaRoute: AppAssinaturaRoute,
+  AppBarbeirosRoute: AppBarbeirosRoute,
+  AppClientesRoute: AppClientesRoute,
+  AppConfiguracoesRoute: AppConfiguracoesRoute,
+  AppFidelidadeRoute: AppFidelidadeRoute,
+  AppFinanceiroRoute: AppFinanceiroRoute,
+  AppServicosRoute: AppServicosRoute,
   AppIndexRoute: AppIndexRoute,
 }
 
