@@ -84,10 +84,14 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
       { name: "description", content: "SaaS brasileiro premium para gestão, agenda, financeiro e fidelidade em barbearias." },
       { name: "author", content: "Barber360" },
       { name: "theme-color", content: "#0f1115" },
-      { property: "og:title", content: "Barber360" },
-      { property: "og:description", content: "SaaS premium para gestão de barbearias." },
+      { property: "og:title", content: "Barber360 — Gestão premium para barbearias" },
+      { property: "og:description", content: "SaaS brasileiro premium para gestão, agenda, financeiro e fidelidade em barbearias." },
       { property: "og:type", content: "website" },
       { name: "twitter:card", content: "summary" },
+      { name: "twitter:title", content: "Barber360 — Gestão premium para barbearias" },
+      { name: "twitter:description", content: "SaaS brasileiro premium para gestão, agenda, financeiro e fidelidade em barbearias." },
+      { property: "og:image", content: "https://pub-bb2e103a32db4e198524a2e9ed8f35b4.r2.dev/6ce70f4b-a21e-44be-8d7d-c6105d0286e4/id-preview-797b6fb9--a6f4d985-b754-49d9-ae48-797a6a9cb3c0.lovable.app-1780354820655.png" },
+      { name: "twitter:image", content: "https://pub-bb2e103a32db4e198524a2e9ed8f35b4.r2.dev/6ce70f4b-a21e-44be-8d7d-c6105d0286e4/id-preview-797b6fb9--a6f4d985-b754-49d9-ae48-797a6a9cb3c0.lovable.app-1780354820655.png" },
     ],
     links: [
       {
