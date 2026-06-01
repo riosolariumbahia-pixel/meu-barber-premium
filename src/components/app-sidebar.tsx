@@ -23,20 +23,27 @@ import {
   useSidebar,
 } from "@/components/ui/sidebar";
 
-const main = [
+type NavItem = {
+  title: string;
+  url: string;
+  icon: typeof LayoutDashboard;
+  exact?: boolean;
+};
+
+const main: NavItem[] = [
   { title: "Dashboard", url: "/app", icon: LayoutDashboard, exact: true },
   { title: "Agenda", url: "/app/agenda", icon: CalendarDays },
   { title: "Clientes", url: "/app/clientes", icon: Users },
   { title: "Barbeiros", url: "/app/barbeiros", icon: Scissors },
   { title: "Serviços", url: "/app/servicos", icon: Sparkles },
-] as const;
+];
 
-const business = [
+const business: NavItem[] = [
   { title: "Financeiro", url: "/app/financeiro", icon: Wallet },
   { title: "Fidelidade", url: "/app/fidelidade", icon: Gift },
   { title: "Assinatura", url: "/app/assinatura", icon: Crown },
   { title: "Configurações", url: "/app/configuracoes", icon: Settings },
-] as const;
+];
 
 export function AppSidebar({ tenantName }: { tenantName?: string }) {
   const { state } = useSidebar();
