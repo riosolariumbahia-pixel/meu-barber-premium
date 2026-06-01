@@ -1,0 +1,14 @@
+{
+  "name": "Barber360",
+  "short_name": "Barber360",
+  "description": "Gestão premium para barbearias",
+  "start_url": "/app",
+  "scope": "/",
+  "display": "standalone",
+  "background_color": "#0f1115",
+  "theme_color": "#0f1115",
+  "lang": "pt-BR",
+  "icons": [
+    { "src": "/favicon.svg", "sizes": "any", "type": "image/svg+xml", "purpose": "any maskable" }
+  ]
+}
