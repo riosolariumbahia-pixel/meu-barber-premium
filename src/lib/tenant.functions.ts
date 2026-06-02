@@ -19,6 +19,20 @@ export const createTenant = createServerFn({ method: "POST" })
   .handler(async ({ data, context }) => {
     const { supabase, userId } = context;
 
+    // 0. CRÍTICO: Garantir que o perfil existe antes de criar tenant
+    const { data: existingProfile } = await supabase
+      .from("profiles")
+      .select("id")
+      .eq("id", userId)
+      .maybeSingle();
+
+    if (!existingProfile) {
+      const { error: profileErr } = await supabase.from("profiles").insert({
+        id: userId,
+      });
+      if (profileErr) throw new Error(`Erro ao criar perfil: ${profileErr.message}`);
+    }
+
     // 1. Create tenant
     const { data: tenant, error: tErr } = await supabase
       .from("tenants")
@@ -53,11 +67,29 @@ export const getMyContext = createServerFn({ method: "GET" })
   .middleware([requireSupabaseAuth])
   .handler(async ({ context }) => {
     const { supabase, userId } = context;
-    const { data: profile } = await supabase
+    const { data: profile, error: profileError } = await supabase
       .from("profiles")
       .select("id, full_name, avatar_url, current_tenant_id")
       .eq("id", userId)
       .maybeSingle();
+
+    // CRÍTICO: Auto-criar perfil se não existir (novo usuário após signup)
+    if (!profile) {
+      const { error: createErr } = await supabase.from("profiles").insert({
+        id: userId,
+      });
+      if (createErr) throw new Error(`Erro ao criar perfil automaticamente: ${createErr.message}`);
+
+      // Retornar perfil vazio para redirecionar ao onboarding
+      return {
+        profile: { id: userId, full_name: null, avatar_url: null, current_tenant_id: null },
+        memberships: [],
+        currentTenant: null,
+        currentRole: null,
+      };
+    }
+
+    if (profileError) throw new Error(profileError.message);
 
     const { data: memberships } = await supabase
       .from("tenant_members")
