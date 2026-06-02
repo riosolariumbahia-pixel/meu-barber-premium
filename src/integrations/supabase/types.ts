@@ -209,6 +209,7 @@ export type Database = {
           description: string
           id: string
           occurred_at: string
+          source_appointment_id: string | null
           tenant_id: string
           type: Database["public"]["Enums"]["cashflow_type"]
         }
@@ -219,6 +220,7 @@ export type Database = {
           description: string
           id?: string
           occurred_at?: string
+          source_appointment_id?: string | null
           tenant_id: string
           type: Database["public"]["Enums"]["cashflow_type"]
         }
@@ -229,6 +231,7 @@ export type Database = {
           description?: string
           id?: string
           occurred_at?: string
+          source_appointment_id?: string | null
           tenant_id?: string
           type?: Database["public"]["Enums"]["cashflow_type"]
         }
@@ -414,43 +417,61 @@ export type Database = {
       }
       tenants: {
         Row: {
+          cashback_percent: number
           city: string | null
           created_at: string
           id: string
+          instagram_handle: string | null
           is_active: boolean
           logo_color: string | null
           name: string
+          pix_key: string | null
+          pix_key_type: string | null
+          points_per_real: number
           slug: string
           subscription_plan: Database["public"]["Enums"]["subscription_plan"]
           subscription_status: Database["public"]["Enums"]["subscription_status"]
           trial_ends_at: string | null
           updated_at: string
+          whatsapp_number: string | null
         }
         Insert: {
+          cashback_percent?: number
           city?: string | null
           created_at?: string
           id?: string
+          instagram_handle?: string | null
           is_active?: boolean
           logo_color?: string | null
           name: string
+          pix_key?: string | null
+          pix_key_type?: string | null
+          points_per_real?: number
           slug: string
           subscription_plan?: Database["public"]["Enums"]["subscription_plan"]
           subscription_status?: Database["public"]["Enums"]["subscription_status"]
           trial_ends_at?: string | null
           updated_at?: string
+          whatsapp_number?: string | null
         }
         Update: {
+          cashback_percent?: number
           city?: string | null
           created_at?: string
           id?: string
+          instagram_handle?: string | null
           is_active?: boolean
           logo_color?: string | null
           name?: string
+          pix_key?: string | null
+          pix_key_type?: string | null
+          points_per_real?: number
           slug?: string
           subscription_plan?: Database["public"]["Enums"]["subscription_plan"]
           subscription_status?: Database["public"]["Enums"]["subscription_status"]
           trial_ends_at?: string | null
           updated_at?: string
+          whatsapp_number?: string | null
         }
         Relationships: []
       }
