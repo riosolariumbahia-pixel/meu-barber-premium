@@ -1,78 +1,88 @@
 
-# Plano — Barber360 Premium SaaS
+# Plano — Fases 2 a 5 do Barber360 (entrega funcional hoje)
 
-## Auditoria do ZIP enviado
+Objetivo: deixar o SaaS operacional hoje, com CRUDs reais, agenda funcional, financeiro com gráficos, fidelidade, planos e integrações preparadas (WhatsApp/PIX/IA). Tudo via `createServerFn` + RLS já existente. Sem mexer em auth, schema de tenants ou design system (já entregues na Fase 1).
 
-O projeto anexado é um app Vite + React 19 + Express (template AI Studio) com Gemini e Supabase. Pontos críticos encontrados:
+## Escopo realista para "funcionar hoje"
 
-- **Stack incompatível** com este projeto Lovable (TanStack Start + Vite 7 + Tailwind v4 + shadcn). Não dá para "colar" o ZIP por cima — precisa ser portado.
-- **Segurança crítica:** isolamento multi-tenant é só por coluna `tenant_id` no client com chave `anon`. Sem RLS, qualquer usuário com a anon key lê dados de qualquer barbearia. Risco real de vazamento entre tenants.
-- **Auth fraca:** `PortalLogin` é local/simulado, sem Supabase Auth real. Sessão guardada só no estado React.
-- **Config sensível em localStorage:** `barber360_supabase_config` permite trocar URL/key pelo console — vetor de ataque.
-- **Sem logs de auditoria, sem migrations, sem políticas, sem trigger de profile.**
-- **Arquitetura monolítica:** `App.tsx` com 1000 linhas concentra navegação, estado e sync. Difícil escalar.
-- **Sem PWA, sem tema claro/escuro real (apenas flag), sem mobile-first consistente.**
-- **Dependências:** React 19.0.1, Vite 6, motion 12, `@google/genai` — todas viáveis, serão substituídas por equivalentes já presentes no template.
+Para caber em uma execução e ficar estável, faço um **MVP completo de cada módulo** — não a versão definitiva de cada item do briefing original. Drag-to-reschedule, push notifications, integração real com PSP/WhatsApp ficam como hooks/estrutura prontos, mas sem provedor amarrado (depende de credenciais do usuário).
 
-Decisão: **portar funcionalidades e UI** do ZIP para a stack Lovable, reescrevendo a camada de dados sobre Lovable Cloud (Supabase gerenciado) com RLS real desde o dia 1.
+## Fase 2 — Operação diária
 
-## Arquitetura alvo
+**Server functions** (`src/lib/*.functions.ts`):
+- `clients.functions.ts` — list/create/update/delete + busca por nome/telefone, agregados (total gasto, última visita, nº visitas).
+- `barbers.functions.ts` — CRUD, ativar/desativar, comissão (fixa/percentual).
+- `services.functions.ts` — CRUD por categoria, duração, preço, ativo.
+- `appointments.functions.ts` — list por dia/semana, create, update (status + reagendar via inputs date), cancel.
 
-- **Frontend:** TanStack Start + React 19 + Tailwind v4 + shadcn/ui (já no projeto), `motion/react`, `recharts`.
-- **Backend:** Lovable Cloud (será habilitado). Toda escrita/leitura sensível via `createServerFn` com `requireSupabaseAuth`. Webhooks (WhatsApp/PIX) em `src/routes/api/public/*`.
-- **Multi-tenant:**
-  - Tabela `tenants` (barbearias) + `tenant_members(user_id, tenant_id, role)`.
-  - Função `security definer` `current_tenant_id()` que lê o tenant ativo do usuário.
-  - **RLS em TODAS as tabelas** com `tenant_id = current_tenant_id()`.
-  - Roles em tabela separada `user_roles` (`owner`, `manager`, `barber`, `client`) — nunca no perfil.
-- **Auditoria:** tabela `audit_logs` + trigger genérico que registra INSERT/UPDATE/DELETE por tenant e usuário.
-- **PWA:** manifest only (instalável, sem service worker — evita problemas no preview Lovable).
-- **Tema claro/escuro:** via `class="dark"` + tokens oklch em `src/styles.css`.
+**UI**:
+- `/app/clientes` — tabela com busca, dialog de cadastro/edição, drawer com histórico.
+- `/app/barbeiros` — grid de cards com avatar, dialog de cadastro.
+- `/app/servicos` — tabela por categoria, dialog de cadastro.
+- `/app/agenda` — visão **dia** (timeline por barbeiro) + visão **semana** (grid). Botão "Novo agendamento" → dialog com cliente (autocomplete), barbeiro, serviço (puxa preço/duração), data/hora. Mudança de status via dropdown (agendado/confirmado/em atendimento/finalizado/cancelado/no-show). Reagendamento via edição (drag-to-reschedule fica para v2 — exige libs pesadas).
 
-## Entregas em fases
+## Fase 3 — Financeiro
 
-Escopo total é enorme (15+ módulos). Proponho 5 fases entregáveis. Confirme a fase 1 e seguimos.
+- `cashflow.functions.ts` — list por período, create receita/despesa, agregados (receita, despesa, lucro, ticket médio, receita por barbeiro/serviço).
+- Quando appointment vira `finalizado`, server function registra automaticamente uma entrada em `cash_flow` (receita) e calcula `commission_paid` conforme o barbeiro.
+- `/app/financeiro` — KPIs no topo, gráfico de receita 30 dias (recharts), tabela de lançamentos, dialog para receita/despesa manual, fechamento mensal com comissões por barbeiro.
+- `/app/index` (dashboard) — KPIs do dia/mês, próximos agendamentos, top barbeiros.
 
-### Fase 1 — Fundação (esta entrega)
-1. Habilitar Lovable Cloud.
-2. Migrations: `tenants`, `tenant_members`, `user_roles`, `profiles`, `audit_logs` + função `has_role`, `current_tenant_id`, trigger de auditoria, trigger `handle_new_user`.
-3. Auth real (email/senha + Google) com `_authenticated` layout, onboarding de barbearia (cria tenant + membership).
-4. Design system Barber360: paleta premium (inspiração HubSpot/Stripe/Linear), tokens oklch claro/escuro, layout shell com sidebar shadcn responsiva, toggle de tema.
-5. Roteamento TanStack para os módulos (placeholders prontos): `/dashboard`, `/agenda`, `/clientes`, `/barbeiros`, `/servicos`, `/financeiro`, `/fidelidade`, `/assinatura`, `/configuracoes`.
-6. Manifest PWA + ícones + meta SEO em pt-BR.
+## Fase 4 — Crescimento
 
-### Fase 2 — Operação diária
-- Módulo **Agenda** (dia/semana/mês, drag-to-reschedule, status: agendado/confirmado/em atendimento/finalizado/cancelado/no-show).
-- Módulo **Clientes** (CRUD, histórico, gasto total, última visita, frequência).
-- Módulo **Barbeiros** (CRUD, foto via upload, especialidade, horários, comissão).
-- Módulo **Serviços** (CRUD, categorias, duração, preço, combos).
+- `loyalty.functions.ts` — regras simples: 1 ponto a cada R$10 gastos + cashback configurável por tenant (campo já existe em `clients`). Mostra saldo e tier (bronze/silver/gold/platinum baseado em gasto acumulado).
+- `/app/fidelidade` — ranking de clientes, configuração da regra, histórico de pontos.
+- `/app/assinatura` — apresenta planos Starter/Pro/Premium, mostra `subscription_status` e `trial_ends_at` do tenant. **Sem cobrança real** (depende de Stripe/Paddle — ofereço habilitar depois).
 
-### Fase 3 — Financeiro
-- Fluxo de caixa, receitas, despesas, lucro.
-- Dashboard financeiro com gráficos (recharts).
-- Indicadores: ticket médio, faturamento mensal, receita por barbeiro/serviço.
-- Comissões automáticas (fixa/percentual), extrato, fechamento mensal.
+## Fase 5 — Integrações (estrutura pronta, sem credenciais externas)
 
-### Fase 4 — Crescimento
-- Fidelidade: cashback, pontos, clube VIP, regra "10 cortes = 1 grátis".
-- Dashboard executivo com rankings.
-- Assinaturas Starter/Pro/Premium (estrutura de plano + trial/ativo/suspenso, sem cobrança real ainda).
+- **IA (Lovable AI Gateway, já tem `LOVABLE_API_KEY`)**:
+  - `ai.functions.ts` com 4 ações: `generateInstagramPost`, `generateWhatsappMessage`, `generateMonthlyReport`, `suggestCampaign` usando `google/gemini-2.5-flash`.
+  - UI: aba "IA" em `/app/configuracoes` + botões contextuais em Clientes ("Gerar mensagem WhatsApp") e Financeiro ("Relatório IA do mês").
+- **WhatsApp**: server function `sendWhatsapp` que monta link `wa.me` com texto (modo "click-to-chat", funciona sem provedor). Webhook `/api/public/whatsapp` deixado preparado com verificação de assinatura HMAC para quando o usuário trouxer provedor.
+- **PIX**: gerador de QR Code estático (BR Code / EMV) usando chave PIX do tenant — funciona 100% sem PSP, suficiente para receber pagamento antecipado. Cobrança dinâmica fica para integração futura.
 
-### Fase 5 — Integrações
-- WhatsApp: server functions + webhook `/api/public/whatsapp` (preparado, sem provedor amarrado).
-- PIX: arquitetura QR Code + Copia-e-Cola + pagamento antecipado (estrutura, integração real depende de PSP escolhido).
-- IA (Lovable AI Gateway): geração de posts Instagram, mensagens WhatsApp, relatórios, sugestões de campanha.
+## Migrações adicionais
 
-## Detalhes técnicos relevantes
+Uma migration nova para suportar tudo acima:
+- `tenants`: `pix_key`, `pix_key_type`, `whatsapp_number`, `instagram_handle`, `cashback_percent`, `points_per_real`.
+- `clients`: índice em `(tenant_id, name)` e `(tenant_id, phone)`.
+- `appointments`: índice em `(tenant_id, starts_at)`, `(tenant_id, barber_id, starts_at)`.
+- `cash_flow`: índice em `(tenant_id, occurred_at)`.
+- Trigger `appointments` → `cash_flow` quando status muda para `finalizado` (idempotente via `appointment_id` em `cash_flow.category`/coluna nova `source_id`).
 
-- **Não vou copiar o ZIP para `src/`.** Vou usar os componentes do ZIP como referência visual/funcional e reescrever em TanStack + shadcn.
-- **Toda query passa por `createServerFn` com `requireSupabaseAuth`** — RLS aplica como usuário logado. Nada de `anon` key fazendo escrita do client.
-- **`supabaseAdmin` só** em jobs administrativos (criar tenant no onboarding, webhooks verificados).
-- **Auditoria** ativada via trigger SQL em todas as tabelas de domínio.
-- **Sem service worker** (apenas manifest) — segue regra do template para evitar quebrar preview.
+## Estrutura técnica
 
-## Pergunta antes de implementar
+```text
+src/lib/
+  clients.functions.ts
+  barbers.functions.ts
+  services.functions.ts
+  appointments.functions.ts
+  cashflow.functions.ts
+  loyalty.functions.ts
+  ai.functions.ts
+  pix.ts                  (gerador BR Code, puro client)
+  whatsapp.ts             (helpers wa.me + template)
+src/routes/api/public/
+  whatsapp.ts             (webhook preparado, HMAC)
+src/components/
+  agenda/                 (DayView, WeekView, AppointmentDialog)
+  clients/                (ClientTable, ClientDialog, ClientHistoryDrawer)
+  barbers/, services/, finance/, loyalty/, ai/
+```
 
-A Fase 1 entrega fundação sólida (auth, multi-tenant com RLS, design system, shell navegável, placeholders dos módulos). As fases 2–5 viriam em mensagens seguintes para manter qualidade.
+Todas as queries via `useSuspenseQuery` + `queryOptions`. Toda mutação via `useMutation` + `queryClient.invalidateQueries`. Loading states com Skeleton, erros com toast (sonner já existe).
 
-Confirma esse plano e a Fase 1 como primeira entrega? Ou prefere outra ordem de prioridade (ex.: Agenda + Clientes antes do design system completo)?
+## O que NÃO entra nesta entrega (e por quê)
+
+- Drag-and-drop real na agenda (dnd-kit + lógica de colisão) — adiciona complexidade que arrisca a estabilidade do MVP.
+- Cobrança recorrente real de assinatura — exige escolher Stripe ou Paddle e configurar produtos.
+- Envio automático de WhatsApp (sem click) — exige conta UAZAPI/Twilio/Z-API com credenciais.
+- App mobile / push notifications — PWA instalável já fica, push exige VAPID + service worker que o template evita.
+
+Posso entregar essas três extensões em mensagens seguintes assim que o usuário trouxer credenciais/provedor.
+
+## Confirmação
+
+Confirma essa entrega das fases 2–5 em formato MVP (CRUDs + agenda + financeiro com gráficos + fidelidade + planos + IA + PIX QR + WhatsApp click-to-chat)? Ao aprovar, começo pela migração e depois implemento módulo a módulo.

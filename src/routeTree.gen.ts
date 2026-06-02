@@ -23,6 +23,7 @@ import { Route as AppClientesRouteImport } from './routes/app.clientes'
 import { Route as AppBarbeirosRouteImport } from './routes/app.barbeiros'
 import { Route as AppAssinaturaRouteImport } from './routes/app.assinatura'
 import { Route as AppAgendaRouteImport } from './routes/app.agenda'
+import { Route as ApiPublicWhatsappRouteImport } from './routes/api.public.whatsapp'
 
 const SignupRoute = SignupRouteImport.update({
   id: '/signup',
@@ -94,6 +95,11 @@ const AppAgendaRoute = AppAgendaRouteImport.update({
   path: '/agenda',
   getParentRoute: () => AppRoute,
 } as any)
+const ApiPublicWhatsappRoute = ApiPublicWhatsappRouteImport.update({
+  id: '/api/public/whatsapp',
+  path: '/api/public/whatsapp',
+  getParentRoute: () => rootRouteImport,
+} as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
@@ -110,6 +116,7 @@ export interface FileRoutesByFullPath {
   '/app/financeiro': typeof AppFinanceiroRoute
   '/app/servicos': typeof AppServicosRoute
   '/app/': typeof AppIndexRoute
+  '/api/public/whatsapp': typeof ApiPublicWhatsappRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
@@ -125,6 +132,7 @@ export interface FileRoutesByTo {
   '/app/financeiro': typeof AppFinanceiroRoute
   '/app/servicos': typeof AppServicosRoute
   '/app': typeof AppIndexRoute
+  '/api/public/whatsapp': typeof ApiPublicWhatsappRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
@@ -142,6 +150,7 @@ export interface FileRoutesById {
   '/app/financeiro': typeof AppFinanceiroRoute
   '/app/servicos': typeof AppServicosRoute
   '/app/': typeof AppIndexRoute
+  '/api/public/whatsapp': typeof ApiPublicWhatsappRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
@@ -160,6 +169,7 @@ export interface FileRouteTypes {
     | '/app/financeiro'
     | '/app/servicos'
     | '/app/'
+    | '/api/public/whatsapp'
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
@@ -175,6 +185,7 @@ export interface FileRouteTypes {
     | '/app/financeiro'
     | '/app/servicos'
     | '/app'
+    | '/api/public/whatsapp'
   id:
     | '__root__'
     | '/'
@@ -191,6 +202,7 @@ export interface FileRouteTypes {
     | '/app/financeiro'
     | '/app/servicos'
     | '/app/'
+    | '/api/public/whatsapp'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
@@ -199,6 +211,7 @@ export interface RootRouteChildren {
   LoginRoute: typeof LoginRoute
   OnboardingRoute: typeof OnboardingRoute
   SignupRoute: typeof SignupRoute
+  ApiPublicWhatsappRoute: typeof ApiPublicWhatsappRoute
 }
 
 declare module '@tanstack/react-router' {
@@ -301,6 +314,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AppAgendaRouteImport
       parentRoute: typeof AppRoute
     }
+    '/api/public/whatsapp': {
+      id: '/api/public/whatsapp'
+      path: '/api/public/whatsapp'
+      fullPath: '/api/public/whatsapp'
+      preLoaderRoute: typeof ApiPublicWhatsappRouteImport
+      parentRoute: typeof rootRouteImport
+    }
   }
 }
 
@@ -336,17 +356,8 @@ const rootRouteChildren: RootRouteChildren = {
   LoginRoute: LoginRoute,
   OnboardingRoute: OnboardingRoute,
   SignupRoute: SignupRoute,
+  ApiPublicWhatsappRoute: ApiPublicWhatsappRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
   ._addFileTypes<FileRouteTypes>()
-
-import type { getRouter } from './router.tsx'
-import type { startInstance } from './start.ts'
-declare module '@tanstack/react-start' {
-  interface Register {
-    ssr: true
-    router: Awaited<ReturnType<typeof getRouter>>
-    config: Awaited<ReturnType<typeof startInstance.getOptions>>
-  }
-}
