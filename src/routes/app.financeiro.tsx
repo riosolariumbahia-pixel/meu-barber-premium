@@ -80,15 +80,15 @@ function FinancePage() {
           <ResponsiveContainer width="100%" height="100%">
             <AreaChart data={summary?.series ?? []}>
               <defs>
-                <linearGradient id="gi" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stopColor="hsl(var(--primary))" stopOpacity={0.5} /><stop offset="100%" stopColor="hsl(var(--primary))" stopOpacity={0} /></linearGradient>
-                <linearGradient id="ge" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stopColor="hsl(var(--destructive))" stopOpacity={0.4} /><stop offset="100%" stopColor="hsl(var(--destructive))" stopOpacity={0} /></linearGradient>
+                <linearGradient id="gi" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stopColor="var(--primary)" stopOpacity={0.5} /><stop offset="100%" stopColor="var(--primary)" stopOpacity={0} /></linearGradient>
+                <linearGradient id="ge" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stopColor="var(--destructive)" stopOpacity={0.4} /><stop offset="100%" stopColor="var(--destructive)" stopOpacity={0} /></linearGradient>
               </defs>
               <CartesianGrid strokeDasharray="3 3" opacity={0.2} />
               <XAxis dataKey="date" tickFormatter={(v) => v.slice(5)} fontSize={11} />
               <YAxis fontSize={11} />
               <Tooltip formatter={(v: any) => formatBRL(Number(v))} />
-              <Area type="monotone" dataKey="income" stroke="hsl(var(--primary))" fill="url(#gi)" name="Receita" />
-              <Area type="monotone" dataKey="expense" stroke="hsl(var(--destructive))" fill="url(#ge)" name="Despesa" />
+              <Area type="monotone" dataKey="income" stroke="var(--primary)" fill="url(#gi)" name="Receita" />
+              <Area type="monotone" dataKey="expense" stroke="var(--destructive)" fill="url(#ge)" name="Despesa" />
             </AreaChart>
           </ResponsiveContainer>
         </div>
