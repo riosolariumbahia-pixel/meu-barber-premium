@@ -1,0 +1,10 @@
+{
+  "buildCommand": "npm run build",
+  "outputDirectory": ".output",
+  "installCommand": "npm install",
+  "framework": "other",
+  "nodeVersion": "22.x",
+  "git": {
+    "deploymentEnabled": true
+  }
+}
