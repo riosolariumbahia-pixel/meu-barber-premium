@@ -8,7 +8,7 @@ async function getTenantId(supabase: any, userId: string): Promise<string> {
   return data.current_tenant_id as string;
 }
 
-const APPT_STATUS = ["scheduled", "confirmed", "in_progress", "completed", "cancelled", "no_show"] as const;
+const APPT_STATUS = ["scheduled", "confirmed", "serving", "completed", "cancelled", "noshow"] as const;
 
 const createSchema = z.object({
   client_id: z.string().uuid().optional().nullable(),

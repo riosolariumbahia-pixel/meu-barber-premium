@@ -8,7 +8,7 @@ async function getTenantId(supabase: any, userId: string): Promise<string> {
   return data.current_tenant_id as string;
 }
 
-const SERVICE_CATEGORIES = ["corte", "barba", "sobrancelha", "pigmentacao", "combo", "outros"] as const;
+const SERVICE_CATEGORIES = ["corte", "barba", "sobrancelha", "pigmentacao", "combo", "outro"] as const;
 
 const serviceSchema = z.object({
   id: z.string().uuid().optional(),
