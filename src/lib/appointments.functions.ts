@@ -116,3 +116,90 @@ export const deleteAppointment = createServerFn({ method: "POST" })
     if (error) throw new Error(error.message);
     return { ok: true };
   });
+
+const walkInSchema = z.object({
+  client_id: z.string().uuid().optional().nullable(),
+  customer_name: z.string().trim().min(2).max(120),
+  customer_phone: z.string().trim().max(20).optional().nullable(),
+  barber_id: z.string().uuid().optional().nullable(),
+  service_id: z.string().uuid(),
+  payment_method: z.enum(["dinheiro", "pix", "debito", "credito", "presencial"]).default("dinheiro"),
+  price_override: z.number().min(0).max(100000).optional(),
+});
+
+export const createWalkIn = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((i) => walkInSchema.parse(i))
+  .handler(async ({ data, context }) => {
+    const { supabase, userId } = context;
+    const tenantId = await getTenantId(supabase, userId);
+
+    const { data: service, error: sErr } = await supabase
+      .from("services").select("id, name, price, duration_minutes")
+      .eq("tenant_id", tenantId).eq("id", data.service_id).maybeSingle();
+    if (sErr) throw new Error(sErr.message);
+    if (!service) throw new Error("Serviço inválido");
+
+    let barberName: string | null = null;
+    if (data.barber_id) {
+      const { data: b } = await supabase.from("barbers").select("name").eq("tenant_id", tenantId).eq("id", data.barber_id).maybeSingle();
+      barberName = b?.name ?? null;
+    }
+
+    const starts = new Date();
+    const ends = new Date(starts.getTime() + Number(service.duration_minutes) * 60000);
+    const price = data.price_override ?? Number(service.price);
+
+    const { data: created, error } = await supabase
+      .from("appointments")
+      .insert({
+        tenant_id: tenantId,
+        client_id: data.client_id || null,
+        customer_name: data.customer_name,
+        customer_phone: data.customer_phone || null,
+        barber_id: data.barber_id || null,
+        barber_name: barberName,
+        service_id: service.id,
+        service_name: service.name,
+        starts_at: starts.toISOString(),
+        ends_at: ends.toISOString(),
+        price,
+        status: "completed",
+        payment_method: data.payment_method,
+        reminder_sent_at: starts.toISOString(),
+      })
+      .select("id")
+      .single();
+    if (error) throw new Error(error.message);
+    return { id: created.id };
+  });
+
+export const listPendingReminders = createServerFn({ method: "GET" })
+  .middleware([requireSupabaseAuth])
+  .handler(async ({ context }) => {
+    const { supabase, userId } = context;
+    const tenantId = await getTenantId(supabase, userId);
+    const { data } = await supabase
+      .from("appointment_reminders")
+      .select("id, appointment_id, wa_link, status, created_at")
+      .eq("tenant_id", tenantId)
+      .eq("status", "ready")
+      .order("created_at", { ascending: false })
+      .limit(50);
+    return data ?? [];
+  });
+
+export const markReminderSent = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((i) => z.object({ id: z.string().uuid() }).parse(i))
+  .handler(async ({ data, context }) => {
+    const { supabase, userId } = context;
+    const tenantId = await getTenantId(supabase, userId);
+    const { error } = await supabase
+      .from("appointment_reminders")
+      .update({ status: "sent", sent_at: new Date().toISOString() })
+      .eq("id", data.id)
+      .eq("tenant_id", tenantId);
+    if (error) throw new Error(error.message);
+    return { ok: true };
+  });
