@@ -8,6 +8,11 @@ async function getTenantId(supabase: any, userId: string): Promise<string> {
   return data.current_tenant_id as string;
 }
 
+async function tryGetTenantId(supabase: any, userId: string): Promise<string | null> {
+  const { data } = await supabase.from("profiles").select("current_tenant_id").eq("id", userId).maybeSingle();
+  return (data?.current_tenant_id as string) ?? null;
+}
+
 const entrySchema = z.object({
   id: z.string().uuid().optional(),
   type: z.enum(["income", "expense"]),
@@ -75,7 +80,16 @@ export const getFinanceSummary = createServerFn({ method: "GET" })
   .middleware([requireSupabaseAuth])
   .handler(async ({ context }) => {
     const { supabase, userId } = context;
-    const tenantId = await getTenantId(supabase, userId);
+    const tenantId = await tryGetTenantId(supabase, userId);
+    if (!tenantId) {
+      return {
+        kpis: { income30: 0, expense30: 0, profit30: 0, monthRevenue: 0, ticket: 0, todayCount: 0, completedCount: 0 },
+        series: [] as { date: string; income: number; expense: number }[],
+        byBarber: [] as { id: string; name: string; revenue: number; commission: number; count: number }[],
+        byService: [] as { name: string; revenue: number; count: number }[],
+        barbers: [] as { id: string; name: string }[],
+      };
+    }
 
     const now = new Date();
     const monthStart = new Date(now.getFullYear(), now.getMonth(), 1).toISOString();
