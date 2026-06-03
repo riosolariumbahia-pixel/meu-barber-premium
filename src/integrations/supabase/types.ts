@@ -512,6 +512,34 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      create_tenant_with_owner: {
+        Args: { _city: string; _name: string; _slug: string }
+        Returns: {
+          cashback_percent: number
+          city: string | null
+          created_at: string
+          id: string
+          instagram_handle: string | null
+          is_active: boolean
+          logo_color: string | null
+          name: string
+          pix_key: string | null
+          pix_key_type: string | null
+          points_per_real: number
+          slug: string
+          subscription_plan: Database["public"]["Enums"]["subscription_plan"]
+          subscription_status: Database["public"]["Enums"]["subscription_status"]
+          trial_ends_at: string | null
+          updated_at: string
+          whatsapp_number: string | null
+        }
+        SetofOptions: {
+          from: "*"
+          to: "tenants"
+          isOneToOne: true
+          isSetofReturn: false
+        }
+      }
       current_tenant_id: { Args: never; Returns: string }
       has_role: {
         Args: {
