@@ -1,19 +1,19 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { useMemo, useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { CalendarDays, Plus, ChevronLeft, ChevronRight, MessageCircle } from "lucide-react";
+import { Plus, ChevronLeft, ChevronRight, MessageCircle, Zap, Share2, Bell } from "lucide-react";
 import { toast } from "sonner";
-import { listAppointments, createAppointment, setAppointmentStatus, deleteAppointment } from "@/lib/appointments.functions";
+import { listAppointments, createAppointment, setAppointmentStatus, deleteAppointment, createWalkIn, listPendingReminders, markReminderSent } from "@/lib/appointments.functions";
 import { listClients } from "@/lib/clients.functions";
 import { listBarbers } from "@/lib/barbers.functions";
 import { listServices } from "@/lib/services.functions";
+import { getTenantSettings } from "@/lib/settings.functions";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Badge } from "@/components/ui/badge";
 import {
   DropdownMenu, DropdownMenuTrigger, DropdownMenuContent, DropdownMenuItem,
 } from "@/components/ui/dropdown-menu";
@@ -47,7 +47,7 @@ function AgendaPage() {
   const [view, setView] = useState<"day" | "week">("day");
   const [anchor, setAnchor] = useState<Date>(startOfDay(new Date()));
   const [open, setOpen] = useState(false);
-  const [tenantName] = useState("Barbearia");
+  const [walkOpen, setWalkOpen] = useState(false);
 
   const from = view === "day" ? anchor : addDays(anchor, -anchor.getDay());
   const to = view === "day" ? addDays(from, 1) : addDays(from, 7);
@@ -61,6 +61,25 @@ function AgendaPage() {
   const { data: clients = [] } = useQuery({ queryKey: ["clients"], queryFn: () => listClients() });
   const { data: barbers = [] } = useQuery({ queryKey: ["barbers"], queryFn: () => listBarbers() });
   const { data: services = [] } = useQuery({ queryKey: ["services"], queryFn: () => listServices() });
+  const { data: tenant } = useQuery({ queryKey: ["tenant-settings"], queryFn: () => getTenantSettings() });
+  const { data: reminders = [] } = useQuery({
+    queryKey: ["pending-reminders"],
+    queryFn: () => listPendingReminders(),
+    refetchInterval: 60_000,
+  });
+  const tenantName = tenant?.name ?? "Barbearia";
+
+  const sendReminder = useMutation({
+    mutationFn: (id: string) => markReminderSent({ data: { id } }),
+    onSuccess: () => qc.invalidateQueries({ queryKey: ["pending-reminders"] }),
+  });
+
+  function copyPublicLink() {
+    if (!tenant?.slug) return toast.error("Salve o nome da barbearia primeiro");
+    const url = `${window.location.origin}/b/${tenant.slug}`;
+    navigator.clipboard.writeText(url);
+    toast.success("Link de agendamento copiado!");
+  }
 
   const setStatus = useMutation({
     mutationFn: (vars: { id: string; status: any }) => setAppointmentStatus({ data: vars }),
@@ -94,9 +113,34 @@ function AgendaPage() {
             <Button size="sm" variant="ghost" onClick={() => setAnchor(startOfDay(new Date()))}>Hoje</Button>
             <Button size="icon" variant="ghost" onClick={() => setAnchor(addDays(anchor, view === "day" ? 1 : 7))}><ChevronRight className="h-4 w-4" /></Button>
           </div>
+          <Button variant="outline" onClick={copyPublicLink}><Share2 className="mr-1 h-4 w-4" /> Link público</Button>
+          <Button variant="secondary" onClick={() => setWalkOpen(true)}><Zap className="mr-1 h-4 w-4" /> Avulso</Button>
           <Button onClick={() => setOpen(true)}><Plus className="mr-1 h-4 w-4" /> Novo</Button>
         </div>
       </header>
+
+      {reminders.length > 0 && (
+        <div className="rounded-xl border border-amber-500/40 bg-amber-500/5 p-4">
+          <div className="mb-2 flex items-center gap-2 text-sm font-semibold text-amber-700 dark:text-amber-300">
+            <Bell className="h-4 w-4" /> {reminders.length} lembrete(s) pronto(s) para envio
+          </div>
+          <ul className="space-y-1">
+            {reminders.slice(0, 5).map((r: any) => (
+              <li key={r.id} className="flex items-center justify-between gap-2 text-sm">
+                <span className="text-muted-foreground">Atendimento em ~1h</span>
+                <div className="flex gap-1">
+                  <Button size="sm" variant="outline" asChild>
+                    <a href={r.wa_link} target="_blank" rel="noreferrer" onClick={() => sendReminder.mutate(r.id)}>
+                      <MessageCircle className="mr-1 h-3.5 w-3.5" />Enviar WhatsApp
+                    </a>
+                  </Button>
+                  <Button size="sm" variant="ghost" onClick={() => sendReminder.mutate(r.id)}>Marcar enviado</Button>
+                </div>
+              </li>
+            ))}
+          </ul>
+        </div>
+      )}
 
       <div className={view === "day" ? "" : "grid grid-cols-1 gap-3 md:grid-cols-7"}>
         {days.map((d) => {
@@ -151,6 +195,7 @@ function AgendaPage() {
       </div>
 
       <AppointmentDialog open={open} onOpenChange={setOpen} clients={clients} barbers={barbers} services={services} />
+      <WalkInDialog open={walkOpen} onOpenChange={setWalkOpen} clients={clients} barbers={barbers} services={services} />
     </div>
   );
 }
