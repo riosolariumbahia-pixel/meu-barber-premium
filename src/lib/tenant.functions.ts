@@ -17,49 +17,13 @@ export const createTenant = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .inputValidator((input) => onboardingSchema.parse(input))
   .handler(async ({ data, context }) => {
-    const { supabase, userId } = context;
-
-    // 0. CRÍTICO: Garantir que o perfil existe antes de criar tenant
-    const { data: existingProfile } = await supabase
-      .from("profiles")
-      .select("id")
-      .eq("id", userId)
-      .maybeSingle();
-
-    if (!existingProfile) {
-      const { error: profileErr } = await supabase.from("profiles").insert({
-        id: userId,
-      });
-      if (profileErr) throw new Error(`Erro ao criar perfil: ${profileErr.message}`);
-    }
-
-    // 1. Create tenant
-    const { data: tenant, error: tErr } = await supabase
-      .from("tenants")
-      .insert({
-        name: data.name,
-        slug: data.slug,
-        city: data.city,
-        subscription_plan: "starter",
-        subscription_status: "trial",
-      })
-      .select()
-      .single();
-    if (tErr) throw new Error(tErr.message);
-
-    // 2. Membership (owner)
-    const { error: mErr } = await supabase
-      .from("tenant_members")
-      .insert({ tenant_id: tenant.id, user_id: userId, role: "owner" });
-    if (mErr) throw new Error(mErr.message);
-
-    // 3. Set as current tenant on profile
-    const { error: pErr } = await supabase
-      .from("profiles")
-      .update({ current_tenant_id: tenant.id })
-      .eq("id", userId);
-    if (pErr) throw new Error(pErr.message);
-
+    const { supabase } = context;
+    const { data: tenant, error } = await supabase.rpc("create_tenant_with_owner", {
+      _name: data.name,
+      _slug: data.slug,
+      _city: data.city,
+    });
+    if (error) throw new Error(error.message);
     return { tenant };
   });
 
