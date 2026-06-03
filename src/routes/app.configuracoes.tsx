@@ -1,7 +1,7 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { useMemo, useState } from "react";
 import { queryOptions, useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { Sparkles, QrCode, MessageCircle } from "lucide-react";
+import { Sparkles, QrCode, MessageCircle, Share2, ExternalLink } from "lucide-react";
 import { toast } from "sonner";
 import { getTenantSettings, updateTenantSettings } from "@/lib/settings.functions";
 import { generateInstagramPost, generateWhatsappMessage, suggestCampaign } from "@/lib/ai.functions";
@@ -33,13 +33,41 @@ function SettingsPage() {
       <Tabs defaultValue="general">
         <TabsList>
           <TabsTrigger value="general">Geral</TabsTrigger>
+          <TabsTrigger value="link"><Share2 className="mr-1 h-3.5 w-3.5" />Link público</TabsTrigger>
           <TabsTrigger value="pix">PIX</TabsTrigger>
           <TabsTrigger value="ai"><Sparkles className="mr-1 h-3.5 w-3.5" />IA</TabsTrigger>
         </TabsList>
         <TabsContent value="general"><GeneralForm tenant={t} /></TabsContent>
+        <TabsContent value="link"><PublicLinkPanel tenant={t} /></TabsContent>
         <TabsContent value="pix"><PixPanel tenant={t} /></TabsContent>
         <TabsContent value="ai"><AIPanel /></TabsContent>
       </Tabs>
+    </div>
+  );
+}
+
+function PublicLinkPanel({ tenant }: { tenant: any }) {
+  const url = tenant?.slug && typeof window !== "undefined" ? `${window.location.origin}/b/${tenant.slug}` : "";
+  return (
+    <div className="mt-4 space-y-3 rounded-xl border border-border/60 bg-card p-5">
+      <div className="flex items-center gap-2"><Share2 className="h-4 w-4 text-primary" /><h2 className="font-semibold">Link de agendamento online</h2></div>
+      <p className="text-sm text-muted-foreground">Compartilhe este link com seus clientes pelo WhatsApp, Instagram ou stories. Eles se cadastram e marcam o horário sozinhos — você recebe na agenda automaticamente e enviamos um lembrete 1 hora antes.</p>
+      {url ? (
+        <>
+          <Input readOnly value={url} className="font-mono text-xs" />
+          <div className="flex flex-wrap gap-2">
+            <Button onClick={() => { navigator.clipboard.writeText(url); toast.success("Link copiado!"); }}>Copiar link</Button>
+            <Button variant="outline" asChild><a href={url} target="_blank" rel="noreferrer"><ExternalLink className="mr-1 h-4 w-4" />Abrir</a></Button>
+            <Button variant="outline" asChild>
+              <a target="_blank" rel="noreferrer" href={`https://wa.me/?text=${encodeURIComponent(`Agende seu horário online: ${url}`)}`}>
+                <MessageCircle className="mr-1 h-4 w-4" />Compartilhar no WhatsApp
+              </a>
+            </Button>
+          </div>
+        </>
+      ) : (
+        <p className="text-sm text-muted-foreground">Salve o nome da barbearia primeiro para gerar o link.</p>
+      )}
     </div>
   );
 }

@@ -15,6 +15,7 @@ import { Route as LoginRouteImport } from './routes/login'
 import { Route as AppRouteImport } from './routes/app'
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as AppIndexRouteImport } from './routes/app.index'
+import { Route as BSlugRouteImport } from './routes/b.$slug'
 import { Route as AppServicosRouteImport } from './routes/app.servicos'
 import { Route as AppFinanceiroRouteImport } from './routes/app.financeiro'
 import { Route as AppFidelidadeRouteImport } from './routes/app.fidelidade'
@@ -24,6 +25,7 @@ import { Route as AppBarbeirosRouteImport } from './routes/app.barbeiros'
 import { Route as AppAssinaturaRouteImport } from './routes/app.assinatura'
 import { Route as AppAgendaRouteImport } from './routes/app.agenda'
 import { Route as ApiPublicWhatsappRouteImport } from './routes/api.public.whatsapp'
+import { Route as ApiPublicCronRemindersRouteImport } from './routes/api.public.cron.reminders'
 
 const SignupRoute = SignupRouteImport.update({
   id: '/signup',
@@ -54,6 +56,11 @@ const AppIndexRoute = AppIndexRouteImport.update({
   id: '/',
   path: '/',
   getParentRoute: () => AppRoute,
+} as any)
+const BSlugRoute = BSlugRouteImport.update({
+  id: '/b/$slug',
+  path: '/b/$slug',
+  getParentRoute: () => rootRouteImport,
 } as any)
 const AppServicosRoute = AppServicosRouteImport.update({
   id: '/servicos',
@@ -100,6 +107,11 @@ const ApiPublicWhatsappRoute = ApiPublicWhatsappRouteImport.update({
   path: '/api/public/whatsapp',
   getParentRoute: () => rootRouteImport,
 } as any)
+const ApiPublicCronRemindersRoute = ApiPublicCronRemindersRouteImport.update({
+  id: '/api/public/cron/reminders',
+  path: '/api/public/cron/reminders',
+  getParentRoute: () => rootRouteImport,
+} as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
@@ -115,8 +127,10 @@ export interface FileRoutesByFullPath {
   '/app/fidelidade': typeof AppFidelidadeRoute
   '/app/financeiro': typeof AppFinanceiroRoute
   '/app/servicos': typeof AppServicosRoute
+  '/b/$slug': typeof BSlugRoute
   '/app/': typeof AppIndexRoute
   '/api/public/whatsapp': typeof ApiPublicWhatsappRoute
+  '/api/public/cron/reminders': typeof ApiPublicCronRemindersRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
@@ -131,8 +145,10 @@ export interface FileRoutesByTo {
   '/app/fidelidade': typeof AppFidelidadeRoute
   '/app/financeiro': typeof AppFinanceiroRoute
   '/app/servicos': typeof AppServicosRoute
+  '/b/$slug': typeof BSlugRoute
   '/app': typeof AppIndexRoute
   '/api/public/whatsapp': typeof ApiPublicWhatsappRoute
+  '/api/public/cron/reminders': typeof ApiPublicCronRemindersRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
@@ -149,8 +165,10 @@ export interface FileRoutesById {
   '/app/fidelidade': typeof AppFidelidadeRoute
   '/app/financeiro': typeof AppFinanceiroRoute
   '/app/servicos': typeof AppServicosRoute
+  '/b/$slug': typeof BSlugRoute
   '/app/': typeof AppIndexRoute
   '/api/public/whatsapp': typeof ApiPublicWhatsappRoute
+  '/api/public/cron/reminders': typeof ApiPublicCronRemindersRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
@@ -168,8 +186,10 @@ export interface FileRouteTypes {
     | '/app/fidelidade'
     | '/app/financeiro'
     | '/app/servicos'
+    | '/b/$slug'
     | '/app/'
     | '/api/public/whatsapp'
+    | '/api/public/cron/reminders'
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
@@ -184,8 +204,10 @@ export interface FileRouteTypes {
     | '/app/fidelidade'
     | '/app/financeiro'
     | '/app/servicos'
+    | '/b/$slug'
     | '/app'
     | '/api/public/whatsapp'
+    | '/api/public/cron/reminders'
   id:
     | '__root__'
     | '/'
@@ -201,8 +223,10 @@ export interface FileRouteTypes {
     | '/app/fidelidade'
     | '/app/financeiro'
     | '/app/servicos'
+    | '/b/$slug'
     | '/app/'
     | '/api/public/whatsapp'
+    | '/api/public/cron/reminders'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
@@ -211,7 +235,9 @@ export interface RootRouteChildren {
   LoginRoute: typeof LoginRoute
   OnboardingRoute: typeof OnboardingRoute
   SignupRoute: typeof SignupRoute
+  BSlugRoute: typeof BSlugRoute
   ApiPublicWhatsappRoute: typeof ApiPublicWhatsappRoute
+  ApiPublicCronRemindersRoute: typeof ApiPublicCronRemindersRoute
 }
 
 declare module '@tanstack/react-router' {
@@ -257,6 +283,13 @@ declare module '@tanstack/react-router' {
       fullPath: '/app/'
       preLoaderRoute: typeof AppIndexRouteImport
       parentRoute: typeof AppRoute
+    }
+    '/b/$slug': {
+      id: '/b/$slug'
+      path: '/b/$slug'
+      fullPath: '/b/$slug'
+      preLoaderRoute: typeof BSlugRouteImport
+      parentRoute: typeof rootRouteImport
     }
     '/app/servicos': {
       id: '/app/servicos'
@@ -321,6 +354,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ApiPublicWhatsappRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/api/public/cron/reminders': {
+      id: '/api/public/cron/reminders'
+      path: '/api/public/cron/reminders'
+      fullPath: '/api/public/cron/reminders'
+      preLoaderRoute: typeof ApiPublicCronRemindersRouteImport
+      parentRoute: typeof rootRouteImport
+    }
   }
 }
 
@@ -356,7 +396,9 @@ const rootRouteChildren: RootRouteChildren = {
   LoginRoute: LoginRoute,
   OnboardingRoute: OnboardingRoute,
   SignupRoute: SignupRoute,
+  BSlugRoute: BSlugRoute,
   ApiPublicWhatsappRoute: ApiPublicWhatsappRoute,
+  ApiPublicCronRemindersRoute: ApiPublicCronRemindersRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)

@@ -1,19 +1,19 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { useMemo, useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { CalendarDays, Plus, ChevronLeft, ChevronRight, MessageCircle } from "lucide-react";
+import { Plus, ChevronLeft, ChevronRight, MessageCircle, Zap, Share2, Bell } from "lucide-react";
 import { toast } from "sonner";
-import { listAppointments, createAppointment, setAppointmentStatus, deleteAppointment } from "@/lib/appointments.functions";
+import { listAppointments, createAppointment, setAppointmentStatus, deleteAppointment, createWalkIn, listPendingReminders, markReminderSent } from "@/lib/appointments.functions";
 import { listClients } from "@/lib/clients.functions";
 import { listBarbers } from "@/lib/barbers.functions";
 import { listServices } from "@/lib/services.functions";
+import { getTenantSettings } from "@/lib/settings.functions";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Badge } from "@/components/ui/badge";
 import {
   DropdownMenu, DropdownMenuTrigger, DropdownMenuContent, DropdownMenuItem,
 } from "@/components/ui/dropdown-menu";
@@ -47,7 +47,7 @@ function AgendaPage() {
   const [view, setView] = useState<"day" | "week">("day");
   const [anchor, setAnchor] = useState<Date>(startOfDay(new Date()));
   const [open, setOpen] = useState(false);
-  const [tenantName] = useState("Barbearia");
+  const [walkOpen, setWalkOpen] = useState(false);
 
   const from = view === "day" ? anchor : addDays(anchor, -anchor.getDay());
   const to = view === "day" ? addDays(from, 1) : addDays(from, 7);
@@ -61,6 +61,25 @@ function AgendaPage() {
   const { data: clients = [] } = useQuery({ queryKey: ["clients"], queryFn: () => listClients() });
   const { data: barbers = [] } = useQuery({ queryKey: ["barbers"], queryFn: () => listBarbers() });
   const { data: services = [] } = useQuery({ queryKey: ["services"], queryFn: () => listServices() });
+  const { data: tenant } = useQuery({ queryKey: ["tenant-settings"], queryFn: () => getTenantSettings() });
+  const { data: reminders = [] } = useQuery({
+    queryKey: ["pending-reminders"],
+    queryFn: () => listPendingReminders(),
+    refetchInterval: 60_000,
+  });
+  const tenantName = tenant?.name ?? "Barbearia";
+
+  const sendReminder = useMutation({
+    mutationFn: (id: string) => markReminderSent({ data: { id } }),
+    onSuccess: () => qc.invalidateQueries({ queryKey: ["pending-reminders"] }),
+  });
+
+  function copyPublicLink() {
+    if (!tenant?.slug) return toast.error("Salve o nome da barbearia primeiro");
+    const url = `${window.location.origin}/b/${tenant.slug}`;
+    navigator.clipboard.writeText(url);
+    toast.success("Link de agendamento copiado!");
+  }
 
   const setStatus = useMutation({
     mutationFn: (vars: { id: string; status: any }) => setAppointmentStatus({ data: vars }),
@@ -94,9 +113,34 @@ function AgendaPage() {
             <Button size="sm" variant="ghost" onClick={() => setAnchor(startOfDay(new Date()))}>Hoje</Button>
             <Button size="icon" variant="ghost" onClick={() => setAnchor(addDays(anchor, view === "day" ? 1 : 7))}><ChevronRight className="h-4 w-4" /></Button>
           </div>
+          <Button variant="outline" onClick={copyPublicLink}><Share2 className="mr-1 h-4 w-4" /> Link público</Button>
+          <Button variant="secondary" onClick={() => setWalkOpen(true)}><Zap className="mr-1 h-4 w-4" /> Avulso</Button>
           <Button onClick={() => setOpen(true)}><Plus className="mr-1 h-4 w-4" /> Novo</Button>
         </div>
       </header>
+
+      {reminders.length > 0 && (
+        <div className="rounded-xl border border-amber-500/40 bg-amber-500/5 p-4">
+          <div className="mb-2 flex items-center gap-2 text-sm font-semibold text-amber-700 dark:text-amber-300">
+            <Bell className="h-4 w-4" /> {reminders.length} lembrete(s) pronto(s) para envio
+          </div>
+          <ul className="space-y-1">
+            {reminders.slice(0, 5).map((r: any) => (
+              <li key={r.id} className="flex items-center justify-between gap-2 text-sm">
+                <span className="text-muted-foreground">Atendimento em ~1h</span>
+                <div className="flex gap-1">
+                  <Button size="sm" variant="outline" asChild>
+                    <a href={r.wa_link} target="_blank" rel="noreferrer" onClick={() => sendReminder.mutate(r.id)}>
+                      <MessageCircle className="mr-1 h-3.5 w-3.5" />Enviar WhatsApp
+                    </a>
+                  </Button>
+                  <Button size="sm" variant="ghost" onClick={() => sendReminder.mutate(r.id)}>Marcar enviado</Button>
+                </div>
+              </li>
+            ))}
+          </ul>
+        </div>
+      )}
 
       <div className={view === "day" ? "" : "grid grid-cols-1 gap-3 md:grid-cols-7"}>
         {days.map((d) => {
@@ -151,6 +195,7 @@ function AgendaPage() {
       </div>
 
       <AppointmentDialog open={open} onOpenChange={setOpen} clients={clients} barbers={barbers} services={services} />
+      <WalkInDialog open={walkOpen} onOpenChange={setWalkOpen} clients={clients} barbers={barbers} services={services} />
     </div>
   );
 }
@@ -235,6 +280,98 @@ function AppointmentDialog({ open, onOpenChange, clients, barbers, services }: {
         <DialogFooter>
           <Button variant="outline" onClick={() => onOpenChange(false)}>Cancelar</Button>
           <Button onClick={() => save.mutate()} disabled={save.isPending || !form.customer_name || !form.serviceId}>{save.isPending ? "Salvando..." : "Agendar"}</Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
+  );
+}
+
+function WalkInDialog({ open, onOpenChange, clients, barbers, services }: { open: boolean; onOpenChange: (v: boolean) => void; clients: any[]; barbers: any[]; services: any[] }) {
+  const qc = useQueryClient();
+  const [form, setForm] = useState<any>({ clientId: "", customer_name: "Cliente avulso", barberId: "", serviceId: "", payment: "dinheiro", price: 0 });
+  useMemo(() => {
+    if (open) setForm({ clientId: "", customer_name: "Cliente avulso", barberId: "", serviceId: "", payment: "dinheiro", price: 0 });
+  }, [open]);
+
+  function onClient(id: string) {
+    const c = clients.find((x) => x.id === id);
+    setForm((f: any) => ({ ...f, clientId: id, customer_name: c?.name ?? f.customer_name }));
+  }
+  function onService(id: string) {
+    const s = services.find((x) => x.id === id);
+    setForm((f: any) => ({ ...f, serviceId: id, price: Number(s?.price ?? f.price) }));
+  }
+
+  const save = useMutation({
+    mutationFn: () => createWalkIn({
+      data: {
+        client_id: form.clientId || null,
+        customer_name: form.customer_name,
+        barber_id: form.barberId || null,
+        service_id: form.serviceId,
+        payment_method: form.payment,
+        price_override: Number(form.price) || undefined,
+      },
+    }),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["appointments"] });
+      qc.invalidateQueries({ queryKey: ["finance-summary"] });
+      qc.invalidateQueries({ queryKey: ["cashflow"] });
+      toast.success("Atendimento registrado e contabilizado");
+      onOpenChange(false);
+    },
+    onError: (e: Error) => toast.error(e.message),
+  });
+
+  return (
+    <Dialog open={open} onOpenChange={onOpenChange}>
+      <DialogContent>
+        <DialogHeader>
+          <DialogTitle className="flex items-center gap-2"><Zap className="h-4 w-4 text-primary" /> Atendimento avulso (walk-in)</DialogTitle>
+        </DialogHeader>
+        <p className="-mt-2 text-xs text-muted-foreground">Registra um atendimento concluído agora e já gera receita no financeiro do dia.</p>
+        <div className="grid gap-3 sm:grid-cols-2">
+          <div className="sm:col-span-2">
+            <Label>Cliente (opcional)</Label>
+            <Select value={form.clientId} onValueChange={onClient}>
+              <SelectTrigger><SelectValue placeholder="Selecionar ou deixar como avulso" /></SelectTrigger>
+              <SelectContent>{clients.map((c) => <SelectItem key={c.id} value={c.id}>{c.name}</SelectItem>)}</SelectContent>
+            </Select>
+          </div>
+          <div className="sm:col-span-2"><Label>Nome</Label><Input value={form.customer_name} onChange={(e) => setForm({ ...form, customer_name: e.target.value })} /></div>
+          <div>
+            <Label>Serviço*</Label>
+            <Select value={form.serviceId} onValueChange={onService}>
+              <SelectTrigger><SelectValue placeholder="Selecione" /></SelectTrigger>
+              <SelectContent>{services.filter((s) => s.is_active).map((s) => <SelectItem key={s.id} value={s.id}>{s.name} · {formatBRL(s.price)}</SelectItem>)}</SelectContent>
+            </Select>
+          </div>
+          <div>
+            <Label>Barbeiro</Label>
+            <Select value={form.barberId} onValueChange={(v) => setForm({ ...form, barberId: v })}>
+              <SelectTrigger><SelectValue placeholder="Selecione" /></SelectTrigger>
+              <SelectContent>{barbers.filter((b) => b.is_active).map((b) => <SelectItem key={b.id} value={b.id}>{b.name}</SelectItem>)}</SelectContent>
+            </Select>
+          </div>
+          <div><Label>Valor (R$)</Label><Input type="number" step="0.01" value={form.price} onChange={(e) => setForm({ ...form, price: Number(e.target.value) })} /></div>
+          <div>
+            <Label>Pagamento</Label>
+            <Select value={form.payment} onValueChange={(v) => setForm({ ...form, payment: v })}>
+              <SelectTrigger><SelectValue /></SelectTrigger>
+              <SelectContent>
+                <SelectItem value="dinheiro">Dinheiro</SelectItem>
+                <SelectItem value="pix">PIX</SelectItem>
+                <SelectItem value="debito">Débito</SelectItem>
+                <SelectItem value="credito">Crédito</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
+        </div>
+        <DialogFooter>
+          <Button variant="outline" onClick={() => onOpenChange(false)}>Cancelar</Button>
+          <Button onClick={() => save.mutate()} disabled={save.isPending || !form.serviceId || !form.customer_name}>
+            {save.isPending ? "Registrando..." : "Registrar atendimento"}
+          </Button>
         </DialogFooter>
       </DialogContent>
     </Dialog>
