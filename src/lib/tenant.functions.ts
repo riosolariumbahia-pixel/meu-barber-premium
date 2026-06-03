@@ -53,8 +53,6 @@ export const getMyContext = createServerFn({ method: "GET" })
       };
     }
 
-    if (profileError) throw new Error(profileError.message);
-
     const { data: memberships } = await supabase
       .from("tenant_members")
       .select("tenant_id, role, tenants ( id, name, slug, city, subscription_plan, subscription_status, trial_ends_at )")
