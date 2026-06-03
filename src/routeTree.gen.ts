@@ -15,6 +15,7 @@ import { Route as LoginRouteImport } from './routes/login'
 import { Route as AppRouteImport } from './routes/app'
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as AppIndexRouteImport } from './routes/app.index'
+import { Route as BSlugRouteImport } from './routes/b.$slug'
 import { Route as AppServicosRouteImport } from './routes/app.servicos'
 import { Route as AppFinanceiroRouteImport } from './routes/app.financeiro'
 import { Route as AppFidelidadeRouteImport } from './routes/app.fidelidade'
@@ -54,6 +55,11 @@ const AppIndexRoute = AppIndexRouteImport.update({
   id: '/',
   path: '/',
   getParentRoute: () => AppRoute,
+} as any)
+const BSlugRoute = BSlugRouteImport.update({
+  id: '/b/$slug',
+  path: '/b/$slug',
+  getParentRoute: () => rootRouteImport,
 } as any)
 const AppServicosRoute = AppServicosRouteImport.update({
   id: '/servicos',
@@ -115,6 +121,7 @@ export interface FileRoutesByFullPath {
   '/app/fidelidade': typeof AppFidelidadeRoute
   '/app/financeiro': typeof AppFinanceiroRoute
   '/app/servicos': typeof AppServicosRoute
+  '/b/$slug': typeof BSlugRoute
   '/app/': typeof AppIndexRoute
   '/api/public/whatsapp': typeof ApiPublicWhatsappRoute
 }
@@ -131,6 +138,7 @@ export interface FileRoutesByTo {
   '/app/fidelidade': typeof AppFidelidadeRoute
   '/app/financeiro': typeof AppFinanceiroRoute
   '/app/servicos': typeof AppServicosRoute
+  '/b/$slug': typeof BSlugRoute
   '/app': typeof AppIndexRoute
   '/api/public/whatsapp': typeof ApiPublicWhatsappRoute
 }
@@ -149,6 +157,7 @@ export interface FileRoutesById {
   '/app/fidelidade': typeof AppFidelidadeRoute
   '/app/financeiro': typeof AppFinanceiroRoute
   '/app/servicos': typeof AppServicosRoute
+  '/b/$slug': typeof BSlugRoute
   '/app/': typeof AppIndexRoute
   '/api/public/whatsapp': typeof ApiPublicWhatsappRoute
 }
@@ -168,6 +177,7 @@ export interface FileRouteTypes {
     | '/app/fidelidade'
     | '/app/financeiro'
     | '/app/servicos'
+    | '/b/$slug'
     | '/app/'
     | '/api/public/whatsapp'
   fileRoutesByTo: FileRoutesByTo
@@ -184,6 +194,7 @@ export interface FileRouteTypes {
     | '/app/fidelidade'
     | '/app/financeiro'
     | '/app/servicos'
+    | '/b/$slug'
     | '/app'
     | '/api/public/whatsapp'
   id:
@@ -201,6 +212,7 @@ export interface FileRouteTypes {
     | '/app/fidelidade'
     | '/app/financeiro'
     | '/app/servicos'
+    | '/b/$slug'
     | '/app/'
     | '/api/public/whatsapp'
   fileRoutesById: FileRoutesById
@@ -211,6 +223,7 @@ export interface RootRouteChildren {
   LoginRoute: typeof LoginRoute
   OnboardingRoute: typeof OnboardingRoute
   SignupRoute: typeof SignupRoute
+  BSlugRoute: typeof BSlugRoute
   ApiPublicWhatsappRoute: typeof ApiPublicWhatsappRoute
 }
 
@@ -257,6 +270,13 @@ declare module '@tanstack/react-router' {
       fullPath: '/app/'
       preLoaderRoute: typeof AppIndexRouteImport
       parentRoute: typeof AppRoute
+    }
+    '/b/$slug': {
+      id: '/b/$slug'
+      path: '/b/$slug'
+      fullPath: '/b/$slug'
+      preLoaderRoute: typeof BSlugRouteImport
+      parentRoute: typeof rootRouteImport
     }
     '/app/servicos': {
       id: '/app/servicos'
@@ -356,8 +376,19 @@ const rootRouteChildren: RootRouteChildren = {
   LoginRoute: LoginRoute,
   OnboardingRoute: OnboardingRoute,
   SignupRoute: SignupRoute,
+  BSlugRoute: BSlugRoute,
   ApiPublicWhatsappRoute: ApiPublicWhatsappRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
   ._addFileTypes<FileRouteTypes>()
+
+import type { getRouter } from './router.tsx'
+import type { startInstance } from './start.ts'
+declare module '@tanstack/react-start' {
+  interface Register {
+    ssr: true
+    router: Awaited<ReturnType<typeof getRouter>>
+    config: Awaited<ReturnType<typeof startInstance.getOptions>>
+  }
+}
