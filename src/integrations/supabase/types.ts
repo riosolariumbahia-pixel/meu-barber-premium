@@ -14,6 +14,39 @@ export type Database = {
   }
   public: {
     Tables: {
+      appointment_reminders: {
+        Row: {
+          appointment_id: string
+          channel: string
+          created_at: string
+          id: string
+          sent_at: string | null
+          status: string
+          tenant_id: string
+          wa_link: string | null
+        }
+        Insert: {
+          appointment_id: string
+          channel?: string
+          created_at?: string
+          id?: string
+          sent_at?: string | null
+          status?: string
+          tenant_id: string
+          wa_link?: string | null
+        }
+        Update: {
+          appointment_id?: string
+          channel?: string
+          created_at?: string
+          id?: string
+          sent_at?: string | null
+          status?: string
+          tenant_id?: string
+          wa_link?: string | null
+        }
+        Relationships: []
+      }
       appointments: {
         Row: {
           barber_id: string | null
@@ -28,6 +61,7 @@ export type Database = {
           notes: string | null
           payment_method: string | null
           price: number
+          reminder_sent_at: string | null
           service_id: string | null
           service_name: string
           starts_at: string
@@ -48,6 +82,7 @@ export type Database = {
           notes?: string | null
           payment_method?: string | null
           price?: number
+          reminder_sent_at?: string | null
           service_id?: string | null
           service_name: string
           starts_at: string
@@ -68,6 +103,7 @@ export type Database = {
           notes?: string | null
           payment_method?: string | null
           price?: number
+          reminder_sent_at?: string | null
           service_id?: string | null
           service_name?: string
           starts_at?: string
