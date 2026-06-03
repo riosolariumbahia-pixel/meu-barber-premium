@@ -31,7 +31,7 @@ export const getMyContext = createServerFn({ method: "GET" })
   .middleware([requireSupabaseAuth])
   .handler(async ({ context }) => {
     const { supabase, userId } = context;
-    const { data: profile, error: profileError } = await supabase
+    const { data: profile } = await supabase
       .from("profiles")
       .select("id, full_name, avatar_url, current_tenant_id")
       .eq("id", userId)
