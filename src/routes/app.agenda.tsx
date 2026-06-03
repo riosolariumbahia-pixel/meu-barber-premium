@@ -285,3 +285,95 @@ function AppointmentDialog({ open, onOpenChange, clients, barbers, services }: {
     </Dialog>
   );
 }
+
+function WalkInDialog({ open, onOpenChange, clients, barbers, services }: { open: boolean; onOpenChange: (v: boolean) => void; clients: any[]; barbers: any[]; services: any[] }) {
+  const qc = useQueryClient();
+  const [form, setForm] = useState<any>({ clientId: "", customer_name: "Cliente avulso", barberId: "", serviceId: "", payment: "dinheiro", price: 0 });
+  useMemo(() => {
+    if (open) setForm({ clientId: "", customer_name: "Cliente avulso", barberId: "", serviceId: "", payment: "dinheiro", price: 0 });
+  }, [open]);
+
+  function onClient(id: string) {
+    const c = clients.find((x) => x.id === id);
+    setForm((f: any) => ({ ...f, clientId: id, customer_name: c?.name ?? f.customer_name }));
+  }
+  function onService(id: string) {
+    const s = services.find((x) => x.id === id);
+    setForm((f: any) => ({ ...f, serviceId: id, price: Number(s?.price ?? f.price) }));
+  }
+
+  const save = useMutation({
+    mutationFn: () => createWalkIn({
+      data: {
+        client_id: form.clientId || null,
+        customer_name: form.customer_name,
+        barber_id: form.barberId || null,
+        service_id: form.serviceId,
+        payment_method: form.payment,
+        price_override: Number(form.price) || undefined,
+      },
+    }),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["appointments"] });
+      qc.invalidateQueries({ queryKey: ["finance-summary"] });
+      qc.invalidateQueries({ queryKey: ["cashflow"] });
+      toast.success("Atendimento registrado e contabilizado");
+      onOpenChange(false);
+    },
+    onError: (e: Error) => toast.error(e.message),
+  });
+
+  return (
+    <Dialog open={open} onOpenChange={onOpenChange}>
+      <DialogContent>
+        <DialogHeader>
+          <DialogTitle className="flex items-center gap-2"><Zap className="h-4 w-4 text-primary" /> Atendimento avulso (walk-in)</DialogTitle>
+        </DialogHeader>
+        <p className="-mt-2 text-xs text-muted-foreground">Registra um atendimento concluído agora e já gera receita no financeiro do dia.</p>
+        <div className="grid gap-3 sm:grid-cols-2">
+          <div className="sm:col-span-2">
+            <Label>Cliente (opcional)</Label>
+            <Select value={form.clientId} onValueChange={onClient}>
+              <SelectTrigger><SelectValue placeholder="Selecionar ou deixar como avulso" /></SelectTrigger>
+              <SelectContent>{clients.map((c) => <SelectItem key={c.id} value={c.id}>{c.name}</SelectItem>)}</SelectContent>
+            </Select>
+          </div>
+          <div className="sm:col-span-2"><Label>Nome</Label><Input value={form.customer_name} onChange={(e) => setForm({ ...form, customer_name: e.target.value })} /></div>
+          <div>
+            <Label>Serviço*</Label>
+            <Select value={form.serviceId} onValueChange={onService}>
+              <SelectTrigger><SelectValue placeholder="Selecione" /></SelectTrigger>
+              <SelectContent>{services.filter((s) => s.is_active).map((s) => <SelectItem key={s.id} value={s.id}>{s.name} · {formatBRL(s.price)}</SelectItem>)}</SelectContent>
+            </Select>
+          </div>
+          <div>
+            <Label>Barbeiro</Label>
+            <Select value={form.barberId} onValueChange={(v) => setForm({ ...form, barberId: v })}>
+              <SelectTrigger><SelectValue placeholder="Selecione" /></SelectTrigger>
+              <SelectContent>{barbers.filter((b) => b.is_active).map((b) => <SelectItem key={b.id} value={b.id}>{b.name}</SelectItem>)}</SelectContent>
+            </Select>
+          </div>
+          <div><Label>Valor (R$)</Label><Input type="number" step="0.01" value={form.price} onChange={(e) => setForm({ ...form, price: Number(e.target.value) })} /></div>
+          <div>
+            <Label>Pagamento</Label>
+            <Select value={form.payment} onValueChange={(v) => setForm({ ...form, payment: v })}>
+              <SelectTrigger><SelectValue /></SelectTrigger>
+              <SelectContent>
+                <SelectItem value="dinheiro">Dinheiro</SelectItem>
+                <SelectItem value="pix">PIX</SelectItem>
+                <SelectItem value="debito">Débito</SelectItem>
+                <SelectItem value="credito">Crédito</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
+        </div>
+        <DialogFooter>
+          <Button variant="outline" onClick={() => onOpenChange(false)}>Cancelar</Button>
+          <Button onClick={() => save.mutate()} disabled={save.isPending || !form.serviceId || !form.customer_name}>
+            {save.isPending ? "Registrando..." : "Registrar atendimento"}
+          </Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
+  );
+}
