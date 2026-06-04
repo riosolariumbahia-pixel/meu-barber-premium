@@ -1,9 +1,9 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { useMemo, useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { Plus, ChevronLeft, ChevronRight, MessageCircle, Zap, Share2, Bell } from "lucide-react";
+import { Plus, ChevronLeft, ChevronRight, MessageCircle, Zap, Share2, Bell, CalendarDays, CalendarRange, Calendar as CalIcon } from "lucide-react";
 import { toast } from "sonner";
-import { listAppointments, createAppointment, setAppointmentStatus, deleteAppointment, createWalkIn, listPendingReminders, markReminderSent } from "@/lib/appointments.functions";
+import { listAppointments, createAppointment, setAppointmentStatus, deleteAppointment, createWalkIn, listPendingReminders, markReminderSent, getAgendaKpis, listMonthCounts } from "@/lib/appointments.functions";
 import { listClients } from "@/lib/clients.functions";
 import { listBarbers } from "@/lib/barbers.functions";
 import { listServices } from "@/lib/services.functions";
@@ -41,22 +41,37 @@ const STATUS_TONE: Record<string, string> = {
 function startOfDay(d: Date) { return new Date(d.getFullYear(), d.getMonth(), d.getDate()); }
 function addDays(d: Date, n: number) { const r = new Date(d); r.setDate(r.getDate() + n); return r; }
 function fmtDate(d: Date) { return d.toLocaleDateString("pt-BR", { weekday: "short", day: "2-digit", month: "short" }); }
+function startOfMonth(d: Date) { return new Date(d.getFullYear(), d.getMonth(), 1); }
+function endOfMonth(d: Date) { return new Date(d.getFullYear(), d.getMonth() + 1, 1); }
+function ymd(d: Date) { return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,"0")}-${String(d.getDate()).padStart(2,"0")}`; }
+function monthLabel(d: Date) { return d.toLocaleDateString("pt-BR", { month: "long", year: "numeric" }); }
 
 function AgendaPage() {
   const qc = useQueryClient();
-  const [view, setView] = useState<"day" | "week">("day");
+  const [view, setView] = useState<"month" | "week" | "day">("month");
   const [anchor, setAnchor] = useState<Date>(startOfDay(new Date()));
   const [open, setOpen] = useState(false);
   const [walkOpen, setWalkOpen] = useState(false);
 
-  const from = view === "day" ? anchor : addDays(anchor, -anchor.getDay());
-  const to = view === "day" ? addDays(from, 1) : addDays(from, 7);
+  const from =
+    view === "day" ? anchor :
+    view === "week" ? addDays(anchor, -anchor.getDay()) :
+    startOfMonth(anchor);
+  const to =
+    view === "day" ? addDays(from, 1) :
+    view === "week" ? addDays(from, 7) :
+    endOfMonth(anchor);
 
   const range = { from: from.toISOString(), to: to.toISOString() };
 
   const { data: appts = [] } = useQuery({
     queryKey: ["appointments", range],
     queryFn: () => listAppointments({ data: range }),
+  });
+  const { data: kpis } = useQuery({
+    queryKey: ["agenda-kpis", ymd(anchor)],
+    queryFn: () => getAgendaKpis({ data: { day: ymd(anchor) } }),
+    refetchInterval: 60_000,
   });
   const { data: clients = [] } = useQuery({ queryKey: ["clients"], queryFn: () => listClients() });
   const { data: barbers = [] } = useQuery({ queryKey: ["barbers"], queryFn: () => listBarbers() });
@@ -92,32 +107,46 @@ function AgendaPage() {
     onError: (e: Error) => toast.error(e.message),
   });
 
-  const days = view === "day" ? [from] : Array.from({ length: 7 }, (_, i) => addDays(from, i));
+  const days =
+    view === "day" ? [from] :
+    view === "week" ? Array.from({ length: 7 }, (_, i) => addDays(from, i)) :
+    [];
 
   return (
     <div className="space-y-5">
       <header className="flex flex-wrap items-end justify-between gap-3">
         <div>
           <h1 className="text-2xl font-semibold tracking-tight">Agenda</h1>
-          <p className="text-sm text-muted-foreground">{view === "day" ? fmtDate(from) : `${fmtDate(from)} — ${fmtDate(addDays(to, -1))}`}</p>
+          <p className="text-sm text-muted-foreground capitalize">
+            {view === "month" ? monthLabel(anchor) : view === "day" ? fmtDate(from) : `${fmtDate(from)} — ${fmtDate(addDays(to, -1))}`}
+          </p>
         </div>
         <div className="flex items-center gap-2">
           <Tabs value={view} onValueChange={(v) => setView(v as any)}>
             <TabsList>
-              <TabsTrigger value="day">Dia</TabsTrigger>
-              <TabsTrigger value="week">Semana</TabsTrigger>
+              <TabsTrigger value="month"><CalIcon className="mr-1 h-3.5 w-3.5" />Mês</TabsTrigger>
+              <TabsTrigger value="week"><CalendarRange className="mr-1 h-3.5 w-3.5" />Semana</TabsTrigger>
+              <TabsTrigger value="day"><CalendarDays className="mr-1 h-3.5 w-3.5" />Dia</TabsTrigger>
             </TabsList>
           </Tabs>
           <div className="flex items-center rounded-md border border-border">
-            <Button size="icon" variant="ghost" onClick={() => setAnchor(addDays(anchor, view === "day" ? -1 : -7))}><ChevronLeft className="h-4 w-4" /></Button>
+            <Button size="icon" variant="ghost" onClick={() => {
+              if (view === "month") setAnchor(new Date(anchor.getFullYear(), anchor.getMonth() - 1, 1));
+              else setAnchor(addDays(anchor, view === "day" ? -1 : -7));
+            }}><ChevronLeft className="h-4 w-4" /></Button>
             <Button size="sm" variant="ghost" onClick={() => setAnchor(startOfDay(new Date()))}>Hoje</Button>
-            <Button size="icon" variant="ghost" onClick={() => setAnchor(addDays(anchor, view === "day" ? 1 : 7))}><ChevronRight className="h-4 w-4" /></Button>
+            <Button size="icon" variant="ghost" onClick={() => {
+              if (view === "month") setAnchor(new Date(anchor.getFullYear(), anchor.getMonth() + 1, 1));
+              else setAnchor(addDays(anchor, view === "day" ? 1 : 7));
+            }}><ChevronRight className="h-4 w-4" /></Button>
           </div>
           <Button variant="outline" onClick={copyPublicLink}><Share2 className="mr-1 h-4 w-4" /> Link público</Button>
           <Button variant="secondary" onClick={() => setWalkOpen(true)}><Zap className="mr-1 h-4 w-4" /> Avulso</Button>
           <Button onClick={() => setOpen(true)}><Plus className="mr-1 h-4 w-4" /> Novo</Button>
         </div>
       </header>
+
+      <KpiStrip kpis={kpis} />
 
       {reminders.length > 0 && (
         <div className="rounded-xl border border-amber-500/40 bg-amber-500/5 p-4">
@@ -143,7 +172,9 @@ function AgendaPage() {
       )}
 
       <div className={view === "day" ? "" : "grid grid-cols-1 gap-3 md:grid-cols-7"}>
-        {days.map((d) => {
+        {view === "month" ? (
+          <MonthGrid anchor={anchor} appts={appts as any[]} onPickDay={(d) => { setAnchor(d); setView("day"); }} />
+        ) : days.map((d) => {
           const list = (appts as any[]).filter((a) => {
             const s = new Date(a.starts_at);
             return s >= d && s < addDays(d, 1);
@@ -196,6 +227,89 @@ function AgendaPage() {
 
       <AppointmentDialog open={open} onOpenChange={setOpen} clients={clients} barbers={barbers} services={services} />
       <WalkInDialog open={walkOpen} onOpenChange={setWalkOpen} clients={clients} barbers={barbers} services={services} />
+    </div>
+  );
+}
+
+function KpiStrip({ kpis }: { kpis: any }) {
+  const t = kpis?.today ?? {};
+  const m = kpis?.month ?? {};
+  const cards = [
+    { label: "Hoje", value: `${t.total ?? 0}`, sub: `${t.confirmed ?? 0} confirmados · ${t.completed ?? 0} concluídos` },
+    { label: "Faturamento previsto (hoje)", value: formatBRL(Number(t.revenue_forecast ?? 0)), sub: `Realizado: ${formatBRL(Number(t.revenue_done ?? 0))}` },
+    { label: "Mês — atendimentos", value: `${m.total ?? 0}`, sub: `${m.completed ?? 0} concluídos` },
+    { label: "Mês — faturamento", value: formatBRL(Number(m.revenue_done ?? 0)), sub: `Previsto: ${formatBRL(Number(m.revenue_forecast ?? 0))}` },
+    { label: "Ticket médio (mês)", value: formatBRL(Number(m.avg_ticket ?? 0)), sub: `${m.unique_clients ?? 0} clientes únicos` },
+  ];
+  return (
+    <div className="grid grid-cols-2 gap-3 md:grid-cols-5">
+      {cards.map((c) => (
+        <div key={c.label} className="rounded-xl border border-border/60 bg-card p-3">
+          <div className="text-[11px] uppercase tracking-wider text-muted-foreground">{c.label}</div>
+          <div className="mt-1 text-xl font-semibold tracking-tight">{c.value}</div>
+          <div className="mt-0.5 text-[11px] text-muted-foreground">{c.sub}</div>
+        </div>
+      ))}
+    </div>
+  );
+}
+
+const MONTH_STATUS_DOT: Record<string, string> = {
+  scheduled: "bg-blue-500",
+  confirmed: "bg-emerald-500",
+  serving: "bg-amber-500",
+  completed: "bg-primary",
+  cancelled: "bg-muted-foreground/40",
+  noshow: "bg-destructive",
+};
+
+function MonthGrid({ anchor, appts, onPickDay }: { anchor: Date; appts: any[]; onPickDay: (d: Date) => void }) {
+  const first = startOfMonth(anchor);
+  const startWeekday = first.getDay();
+  const gridStart = addDays(first, -startWeekday);
+  const cells = Array.from({ length: 42 }, (_, i) => addDays(gridStart, i));
+  const today = startOfDay(new Date());
+  const byDay = useMemo(() => {
+    const map = new Map<string, any[]>();
+    for (const a of appts) {
+      const key = ymd(new Date(a.starts_at));
+      const arr = map.get(key) ?? [];
+      arr.push(a);
+      map.set(key, arr);
+    }
+    return map;
+  }, [appts]);
+  return (
+    <div className="rounded-xl border border-border/60 bg-card p-3">
+      <div className="mb-2 grid grid-cols-7 gap-1 text-center text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">
+        {["Dom","Seg","Ter","Qua","Qui","Sex","Sáb"].map((d) => <div key={d}>{d}</div>)}
+      </div>
+      <div className="grid grid-cols-7 gap-1">
+        {cells.map((d) => {
+          const inMonth = d.getMonth() === anchor.getMonth();
+          const isToday = d.getTime() === today.getTime();
+          const list = byDay.get(ymd(d)) ?? [];
+          return (
+            <button
+              key={d.toISOString()}
+              onClick={() => onPickDay(startOfDay(d))}
+              className={`min-h-[84px] rounded-lg border p-2 text-left transition hover:bg-accent/40 ${
+                inMonth ? "border-border/40" : "border-transparent bg-muted/20 text-muted-foreground/60"
+              } ${isToday ? "ring-2 ring-primary" : ""}`}
+            >
+              <div className="flex items-center justify-between text-xs font-semibold">
+                <span>{d.getDate()}</span>
+                {list.length > 0 && <span className="rounded-full bg-primary/15 px-1.5 text-[10px] text-primary">{list.length}</span>}
+              </div>
+              <div className="mt-1 flex flex-wrap gap-0.5">
+                {list.slice(0, 8).map((a, i) => (
+                  <span key={i} className={`h-1.5 w-1.5 rounded-full ${MONTH_STATUS_DOT[a.status] ?? "bg-muted-foreground"}`} />
+                ))}
+              </div>
+            </button>
+          );
+        })}
+      </div>
     </div>
   );
 }

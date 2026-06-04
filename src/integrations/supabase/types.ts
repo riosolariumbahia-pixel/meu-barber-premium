@@ -548,6 +548,20 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      agenda_kpis_for_tenant: {
+        Args: { _day: string; _tenant_id: string }
+        Returns: Json
+      }
+      check_appointment_conflict: {
+        Args: {
+          _barber_id: string
+          _ends_at: string
+          _exclude_id: string
+          _starts_at: string
+          _tenant_id: string
+        }
+        Returns: boolean
+      }
       create_tenant_with_owner: {
         Args: { _city: string; _name: string; _slug: string }
         Returns: {

@@ -203,3 +203,33 @@ export const markReminderSent = createServerFn({ method: "POST" })
     if (error) throw new Error(error.message);
     return { ok: true };
   });
+
+export const getAgendaKpis = createServerFn({ method: "GET" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((i) => z.object({ day: z.string() }).parse(i))
+  .handler(async ({ data, context }) => {
+    const { supabase, userId } = context;
+    const tenantId = await getTenantId(supabase, userId);
+    const { data: kpis, error } = await supabase.rpc("agenda_kpis_for_tenant", {
+      _tenant_id: tenantId,
+      _day: data.day,
+    });
+    if (error) throw new Error(error.message);
+    return kpis as any;
+  });
+
+export const listMonthCounts = createServerFn({ method: "GET" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((i) => z.object({ from: z.string(), to: z.string() }).parse(i))
+  .handler(async ({ data, context }) => {
+    const { supabase, userId } = context;
+    const tenantId = await getTenantId(supabase, userId);
+    const { data: rows, error } = await supabase
+      .from("appointments")
+      .select("starts_at, status, price")
+      .eq("tenant_id", tenantId)
+      .gte("starts_at", data.from)
+      .lt("starts_at", data.to);
+    if (error) throw new Error(error.message);
+    return rows ?? [];
+  });
