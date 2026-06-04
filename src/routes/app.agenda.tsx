@@ -172,7 +172,9 @@ function AgendaPage() {
       )}
 
       <div className={view === "day" ? "" : "grid grid-cols-1 gap-3 md:grid-cols-7"}>
-        {days.map((d) => {
+        {view === "month" ? (
+          <MonthGrid anchor={anchor} appts={appts as any[]} onPickDay={(d) => { setAnchor(d); setView("day"); }} />
+        ) : days.map((d) => {
           const list = (appts as any[]).filter((a) => {
             const s = new Date(a.starts_at);
             return s >= d && s < addDays(d, 1);
