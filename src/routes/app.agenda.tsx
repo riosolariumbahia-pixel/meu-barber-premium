@@ -1,9 +1,9 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { useMemo, useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { Plus, ChevronLeft, ChevronRight, MessageCircle, Zap, Share2, Bell } from "lucide-react";
+import { Plus, ChevronLeft, ChevronRight, MessageCircle, Zap, Share2, Bell, CalendarDays, CalendarRange, Calendar as CalIcon } from "lucide-react";
 import { toast } from "sonner";
-import { listAppointments, createAppointment, setAppointmentStatus, deleteAppointment, createWalkIn, listPendingReminders, markReminderSent } from "@/lib/appointments.functions";
+import { listAppointments, createAppointment, setAppointmentStatus, deleteAppointment, createWalkIn, listPendingReminders, markReminderSent, getAgendaKpis, listMonthCounts } from "@/lib/appointments.functions";
 import { listClients } from "@/lib/clients.functions";
 import { listBarbers } from "@/lib/barbers.functions";
 import { listServices } from "@/lib/services.functions";
@@ -41,22 +41,37 @@ const STATUS_TONE: Record<string, string> = {
 function startOfDay(d: Date) { return new Date(d.getFullYear(), d.getMonth(), d.getDate()); }
 function addDays(d: Date, n: number) { const r = new Date(d); r.setDate(r.getDate() + n); return r; }
 function fmtDate(d: Date) { return d.toLocaleDateString("pt-BR", { weekday: "short", day: "2-digit", month: "short" }); }
+function startOfMonth(d: Date) { return new Date(d.getFullYear(), d.getMonth(), 1); }
+function endOfMonth(d: Date) { return new Date(d.getFullYear(), d.getMonth() + 1, 1); }
+function ymd(d: Date) { return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,"0")}-${String(d.getDate()).padStart(2,"0")}`; }
+function monthLabel(d: Date) { return d.toLocaleDateString("pt-BR", { month: "long", year: "numeric" }); }
 
 function AgendaPage() {
   const qc = useQueryClient();
-  const [view, setView] = useState<"day" | "week">("day");
+  const [view, setView] = useState<"month" | "week" | "day">("month");
   const [anchor, setAnchor] = useState<Date>(startOfDay(new Date()));
   const [open, setOpen] = useState(false);
   const [walkOpen, setWalkOpen] = useState(false);
 
-  const from = view === "day" ? anchor : addDays(anchor, -anchor.getDay());
-  const to = view === "day" ? addDays(from, 1) : addDays(from, 7);
+  const from =
+    view === "day" ? anchor :
+    view === "week" ? addDays(anchor, -anchor.getDay()) :
+    startOfMonth(anchor);
+  const to =
+    view === "day" ? addDays(from, 1) :
+    view === "week" ? addDays(from, 7) :
+    endOfMonth(anchor);
 
   const range = { from: from.toISOString(), to: to.toISOString() };
 
   const { data: appts = [] } = useQuery({
     queryKey: ["appointments", range],
     queryFn: () => listAppointments({ data: range }),
+  });
+  const { data: kpis } = useQuery({
+    queryKey: ["agenda-kpis", ymd(anchor)],
+    queryFn: () => getAgendaKpis({ data: { day: ymd(anchor) } }),
+    refetchInterval: 60_000,
   });
   const { data: clients = [] } = useQuery({ queryKey: ["clients"], queryFn: () => listClients() });
   const { data: barbers = [] } = useQuery({ queryKey: ["barbers"], queryFn: () => listBarbers() });
@@ -92,32 +107,46 @@ function AgendaPage() {
     onError: (e: Error) => toast.error(e.message),
   });
 
-  const days = view === "day" ? [from] : Array.from({ length: 7 }, (_, i) => addDays(from, i));
+  const days =
+    view === "day" ? [from] :
+    view === "week" ? Array.from({ length: 7 }, (_, i) => addDays(from, i)) :
+    [];
 
   return (
     <div className="space-y-5">
       <header className="flex flex-wrap items-end justify-between gap-3">
         <div>
           <h1 className="text-2xl font-semibold tracking-tight">Agenda</h1>
-          <p className="text-sm text-muted-foreground">{view === "day" ? fmtDate(from) : `${fmtDate(from)} — ${fmtDate(addDays(to, -1))}`}</p>
+          <p className="text-sm text-muted-foreground capitalize">
+            {view === "month" ? monthLabel(anchor) : view === "day" ? fmtDate(from) : `${fmtDate(from)} — ${fmtDate(addDays(to, -1))}`}
+          </p>
         </div>
         <div className="flex items-center gap-2">
           <Tabs value={view} onValueChange={(v) => setView(v as any)}>
             <TabsList>
-              <TabsTrigger value="day">Dia</TabsTrigger>
-              <TabsTrigger value="week">Semana</TabsTrigger>
+              <TabsTrigger value="month"><CalIcon className="mr-1 h-3.5 w-3.5" />Mês</TabsTrigger>
+              <TabsTrigger value="week"><CalendarRange className="mr-1 h-3.5 w-3.5" />Semana</TabsTrigger>
+              <TabsTrigger value="day"><CalendarDays className="mr-1 h-3.5 w-3.5" />Dia</TabsTrigger>
             </TabsList>
           </Tabs>
           <div className="flex items-center rounded-md border border-border">
-            <Button size="icon" variant="ghost" onClick={() => setAnchor(addDays(anchor, view === "day" ? -1 : -7))}><ChevronLeft className="h-4 w-4" /></Button>
+            <Button size="icon" variant="ghost" onClick={() => {
+              if (view === "month") setAnchor(new Date(anchor.getFullYear(), anchor.getMonth() - 1, 1));
+              else setAnchor(addDays(anchor, view === "day" ? -1 : -7));
+            }}><ChevronLeft className="h-4 w-4" /></Button>
             <Button size="sm" variant="ghost" onClick={() => setAnchor(startOfDay(new Date()))}>Hoje</Button>
-            <Button size="icon" variant="ghost" onClick={() => setAnchor(addDays(anchor, view === "day" ? 1 : 7))}><ChevronRight className="h-4 w-4" /></Button>
+            <Button size="icon" variant="ghost" onClick={() => {
+              if (view === "month") setAnchor(new Date(anchor.getFullYear(), anchor.getMonth() + 1, 1));
+              else setAnchor(addDays(anchor, view === "day" ? 1 : 7));
+            }}><ChevronRight className="h-4 w-4" /></Button>
           </div>
           <Button variant="outline" onClick={copyPublicLink}><Share2 className="mr-1 h-4 w-4" /> Link público</Button>
           <Button variant="secondary" onClick={() => setWalkOpen(true)}><Zap className="mr-1 h-4 w-4" /> Avulso</Button>
           <Button onClick={() => setOpen(true)}><Plus className="mr-1 h-4 w-4" /> Novo</Button>
         </div>
       </header>
+
+      <KpiStrip kpis={kpis} />
 
       {reminders.length > 0 && (
         <div className="rounded-xl border border-amber-500/40 bg-amber-500/5 p-4">
