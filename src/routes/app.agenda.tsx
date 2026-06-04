@@ -231,6 +231,89 @@ function AgendaPage() {
   );
 }
 
+function KpiStrip({ kpis }: { kpis: any }) {
+  const t = kpis?.today ?? {};
+  const m = kpis?.month ?? {};
+  const cards = [
+    { label: "Hoje", value: `${t.total ?? 0}`, sub: `${t.confirmed ?? 0} confirmados · ${t.completed ?? 0} concluídos` },
+    { label: "Faturamento previsto (hoje)", value: formatBRL(Number(t.revenue_forecast ?? 0)), sub: `Realizado: ${formatBRL(Number(t.revenue_done ?? 0))}` },
+    { label: "Mês — atendimentos", value: `${m.total ?? 0}`, sub: `${m.completed ?? 0} concluídos` },
+    { label: "Mês — faturamento", value: formatBRL(Number(m.revenue_done ?? 0)), sub: `Previsto: ${formatBRL(Number(m.revenue_forecast ?? 0))}` },
+    { label: "Ticket médio (mês)", value: formatBRL(Number(m.avg_ticket ?? 0)), sub: `${m.unique_clients ?? 0} clientes únicos` },
+  ];
+  return (
+    <div className="grid grid-cols-2 gap-3 md:grid-cols-5">
+      {cards.map((c) => (
+        <div key={c.label} className="rounded-xl border border-border/60 bg-card p-3">
+          <div className="text-[11px] uppercase tracking-wider text-muted-foreground">{c.label}</div>
+          <div className="mt-1 text-xl font-semibold tracking-tight">{c.value}</div>
+          <div className="mt-0.5 text-[11px] text-muted-foreground">{c.sub}</div>
+        </div>
+      ))}
+    </div>
+  );
+}
+
+const MONTH_STATUS_DOT: Record<string, string> = {
+  scheduled: "bg-blue-500",
+  confirmed: "bg-emerald-500",
+  serving: "bg-amber-500",
+  completed: "bg-primary",
+  cancelled: "bg-muted-foreground/40",
+  noshow: "bg-destructive",
+};
+
+function MonthGrid({ anchor, appts, onPickDay }: { anchor: Date; appts: any[]; onPickDay: (d: Date) => void }) {
+  const first = startOfMonth(anchor);
+  const startWeekday = first.getDay();
+  const gridStart = addDays(first, -startWeekday);
+  const cells = Array.from({ length: 42 }, (_, i) => addDays(gridStart, i));
+  const today = startOfDay(new Date());
+  const byDay = useMemo(() => {
+    const map = new Map<string, any[]>();
+    for (const a of appts) {
+      const key = ymd(new Date(a.starts_at));
+      const arr = map.get(key) ?? [];
+      arr.push(a);
+      map.set(key, arr);
+    }
+    return map;
+  }, [appts]);
+  return (
+    <div className="rounded-xl border border-border/60 bg-card p-3">
+      <div className="mb-2 grid grid-cols-7 gap-1 text-center text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">
+        {["Dom","Seg","Ter","Qua","Qui","Sex","Sáb"].map((d) => <div key={d}>{d}</div>)}
+      </div>
+      <div className="grid grid-cols-7 gap-1">
+        {cells.map((d) => {
+          const inMonth = d.getMonth() === anchor.getMonth();
+          const isToday = d.getTime() === today.getTime();
+          const list = byDay.get(ymd(d)) ?? [];
+          return (
+            <button
+              key={d.toISOString()}
+              onClick={() => onPickDay(startOfDay(d))}
+              className={`min-h-[84px] rounded-lg border p-2 text-left transition hover:bg-accent/40 ${
+                inMonth ? "border-border/40" : "border-transparent bg-muted/20 text-muted-foreground/60"
+              } ${isToday ? "ring-2 ring-primary" : ""}`}
+            >
+              <div className="flex items-center justify-between text-xs font-semibold">
+                <span>{d.getDate()}</span>
+                {list.length > 0 && <span className="rounded-full bg-primary/15 px-1.5 text-[10px] text-primary">{list.length}</span>}
+              </div>
+              <div className="mt-1 flex flex-wrap gap-0.5">
+                {list.slice(0, 8).map((a, i) => (
+                  <span key={i} className={`h-1.5 w-1.5 rounded-full ${MONTH_STATUS_DOT[a.status] ?? "bg-muted-foreground"}`} />
+                ))}
+              </div>
+            </button>
+          );
+        })}
+      </div>
+    </div>
+  );
+}
+
 function AppointmentDialog({ open, onOpenChange, clients, barbers, services }: { open: boolean; onOpenChange: (v: boolean) => void; clients: any[]; barbers: any[]; services: any[] }) {
   const qc = useQueryClient();
   const [form, setForm] = useState<any>({ clientId: "", customer_name: "", customer_phone: "", barberId: "", serviceId: "", date: "", time: "", price: 0 });
