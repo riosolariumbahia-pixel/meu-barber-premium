@@ -1,9 +1,10 @@
 import { createFileRoute } from "@tanstack/react-router";
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { Plus, ChevronLeft, ChevronRight, MessageCircle, Zap, Share2, Bell, CalendarDays, CalendarRange, Calendar as CalIcon } from "lucide-react";
+import { Plus, ChevronLeft, ChevronRight, MessageCircle, Zap, Share2, Bell, CalendarDays, CalendarRange, Calendar as CalIcon, Ban, Trash2 } from "lucide-react";
 import { toast } from "sonner";
-import { listAppointments, createAppointment, setAppointmentStatus, deleteAppointment, createWalkIn, listPendingReminders, markReminderSent, getAgendaKpis, listMonthCounts } from "@/lib/appointments.functions";
+import { listAppointments, createAppointment, setAppointmentStatus, deleteAppointment, createWalkIn, listPendingReminders, markReminderSent, getAgendaKpis } from "@/lib/appointments.functions";
+import { listBlocks, createBlock, deleteBlock, moveAppointment } from "@/lib/blocks.functions";
 import { listClients } from "@/lib/clients.functions";
 import { listBarbers } from "@/lib/barbers.functions";
 import { listServices } from "@/lib/services.functions";
@@ -52,6 +53,7 @@ function AgendaPage() {
   const [anchor, setAnchor] = useState<Date>(startOfDay(new Date()));
   const [open, setOpen] = useState(false);
   const [walkOpen, setWalkOpen] = useState(false);
+  const [blockOpen, setBlockOpen] = useState(false);
 
   const from =
     view === "day" ? anchor :
@@ -67,6 +69,10 @@ function AgendaPage() {
   const { data: appts = [] } = useQuery({
     queryKey: ["appointments", range],
     queryFn: () => listAppointments({ data: range }),
+  });
+  const { data: blocks = [] } = useQuery({
+    queryKey: ["blocks", range],
+    queryFn: () => listBlocks({ data: range }),
   });
   const { data: kpis } = useQuery({
     queryKey: ["agenda-kpis", ymd(anchor)],
@@ -106,6 +112,16 @@ function AgendaPage() {
     onSuccess: () => { qc.invalidateQueries({ queryKey: ["appointments"] }); toast.success("Agendamento removido"); },
     onError: (e: Error) => toast.error(e.message),
   });
+  const move = useMutation({
+    mutationFn: (vars: { id: string; starts_at: string }) => moveAppointment({ data: vars }),
+    onSuccess: () => { qc.invalidateQueries({ queryKey: ["appointments"] }); toast.success("Agendamento movido"); },
+    onError: (e: Error) => toast.error(e.message),
+  });
+  const delBlock = useMutation({
+    mutationFn: (id: string) => deleteBlock({ data: { id } }),
+    onSuccess: () => { qc.invalidateQueries({ queryKey: ["blocks"] }); toast.success("Bloqueio removido"); },
+    onError: (e: Error) => toast.error(e.message),
+  });
 
   const days =
     view === "day" ? [from] :
@@ -141,6 +157,7 @@ function AgendaPage() {
             }}><ChevronRight className="h-4 w-4" /></Button>
           </div>
           <Button variant="outline" onClick={copyPublicLink}><Share2 className="mr-1 h-4 w-4" /> Link público</Button>
+          <Button variant="outline" onClick={() => setBlockOpen(true)}><Ban className="mr-1 h-4 w-4" /> Bloquear</Button>
           <Button variant="secondary" onClick={() => setWalkOpen(true)}><Zap className="mr-1 h-4 w-4" /> Avulso</Button>
           <Button onClick={() => setOpen(true)}><Plus className="mr-1 h-4 w-4" /> Novo</Button>
         </div>
@@ -171,10 +188,23 @@ function AgendaPage() {
         </div>
       )}
 
-      <div className={view === "day" ? "" : "grid grid-cols-1 gap-3 md:grid-cols-7"}>
-        {view === "month" ? (
-          <MonthGrid anchor={anchor} appts={appts as any[]} onPickDay={(d) => { setAnchor(d); setView("day"); }} />
-        ) : days.map((d) => {
+      {view === "month" ? (
+        <MonthGrid anchor={anchor} appts={appts as any[]} onPickDay={(d) => { setAnchor(d); setView("day"); }} />
+      ) : (
+        <TimelineView
+          days={days}
+          appts={appts as any[]}
+          blocks={blocks as any[]}
+          tenantName={tenantName}
+          onMove={(id, starts_at) => move.mutate({ id, starts_at })}
+          onStatus={(id, status) => setStatus.mutate({ id, status })}
+          onDelete={(id) => { if (confirm("Remover agendamento?")) del.mutate(id); }}
+          onDeleteBlock={(id) => { if (confirm("Remover bloqueio?")) delBlock.mutate(id); }}
+        />
+      )}
+
+      <div className="hidden">
+        {days.map((d) => {
           const list = (appts as any[]).filter((a) => {
             const s = new Date(a.starts_at);
             return s >= d && s < addDays(d, 1);
@@ -227,6 +257,7 @@ function AgendaPage() {
 
       <AppointmentDialog open={open} onOpenChange={setOpen} clients={clients} barbers={barbers} services={services} />
       <WalkInDialog open={walkOpen} onOpenChange={setWalkOpen} clients={clients} barbers={barbers} services={services} />
+      <BlockDialog open={blockOpen} onOpenChange={setBlockOpen} barbers={barbers} anchor={anchor} />
     </div>
   );
 }
