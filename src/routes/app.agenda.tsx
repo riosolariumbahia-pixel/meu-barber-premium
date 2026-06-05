@@ -262,6 +262,218 @@ function AgendaPage() {
   );
 }
 
+const HOUR_START = 7;
+const HOUR_END = 22;
+const SLOT_MIN = 30;
+const SLOT_PX = 28;
+const ROWS = ((HOUR_END - HOUR_START) * 60) / SLOT_MIN;
+
+function minutesFromStart(d: Date) {
+  return (d.getHours() - HOUR_START) * 60 + d.getMinutes();
+}
+
+function TimelineView({
+  days, appts, blocks, tenantName, onMove, onStatus, onDelete, onDeleteBlock,
+}: {
+  days: Date[]; appts: any[]; blocks: any[]; tenantName: string;
+  onMove: (id: string, starts_at: string) => void;
+  onStatus: (id: string, status: string) => void;
+  onDelete: (id: string) => void;
+  onDeleteBlock: (id: string) => void;
+}) {
+  const slots = Array.from({ length: ROWS }, (_, i) => i);
+  return (
+    <div className="overflow-x-auto rounded-xl border border-border/60 bg-card">
+      <div className="grid min-w-[640px]" style={{ gridTemplateColumns: `60px repeat(${days.length}, minmax(140px, 1fr))` }}>
+        <div className="sticky left-0 z-10 border-b border-r border-border/60 bg-card p-2 text-[10px] uppercase text-muted-foreground">Hora</div>
+        {days.map((d) => (
+          <div key={d.toISOString()} className="border-b border-border/60 p-2 text-center">
+            <div className="text-[11px] uppercase tracking-wider text-muted-foreground">{d.toLocaleDateString("pt-BR", { weekday: "short" })}</div>
+            <div className="text-sm font-semibold">{d.getDate()}/{d.getMonth() + 1}</div>
+          </div>
+        ))}
+
+        <div className="sticky left-0 z-10 border-r border-border/60 bg-card">
+          {slots.map((i) => {
+            const h = HOUR_START + Math.floor((i * SLOT_MIN) / 60);
+            const m = (i * SLOT_MIN) % 60;
+            return (
+              <div key={i} className="flex items-start justify-end pr-1 text-[10px] text-muted-foreground" style={{ height: SLOT_PX }}>
+                {m === 0 ? `${String(h).padStart(2,"0")}:00` : ""}
+              </div>
+            );
+          })}
+        </div>
+
+        {days.map((day) => {
+          const dayAppts = appts.filter((a) => {
+            const s = new Date(a.starts_at);
+            return s >= day && s < addDays(day, 1);
+          });
+          const dayBlocks = blocks.filter((b) => {
+            const s = new Date(b.starts_at);
+            return s >= day && s < addDays(day, 1);
+          });
+          return (
+            <div key={day.toISOString()} className="relative border-r border-border/60">
+              {slots.map((i) => (
+                <SlotCell key={i} day={day} index={i} onDrop={onMove} />
+              ))}
+              {dayBlocks.map((b) => {
+                const top = (minutesFromStart(new Date(b.starts_at)) / SLOT_MIN) * SLOT_PX;
+                const dur = (new Date(b.ends_at).getTime() - new Date(b.starts_at).getTime()) / 60000;
+                const h = Math.max(SLOT_PX, (dur / SLOT_MIN) * SLOT_PX);
+                return (
+                  <div
+                    key={b.id}
+                    className="absolute inset-x-1 rounded-md border border-dashed border-muted-foreground/40 bg-muted/40 p-1 text-[10px] text-muted-foreground"
+                    style={{ top, height: h }}
+                  >
+                    <div className="flex items-center justify-between gap-1">
+                      <span className="truncate">🚫 {b.reason ?? "Bloqueado"}</span>
+                      <button onClick={() => onDeleteBlock(b.id)} className="opacity-60 hover:opacity-100"><Trash2 className="h-3 w-3" /></button>
+                    </div>
+                  </div>
+                );
+              })}
+              {dayAppts.map((a) => (
+                <ApptCard key={a.id} appt={a} tenantName={tenantName} onStatus={onStatus} onDelete={onDelete} />
+              ))}
+            </div>
+          );
+        })}
+      </div>
+    </div>
+  );
+}
+
+function SlotCell({ day, index, onDrop }: { day: Date; index: number; onDrop: (id: string, startsAt: string) => void }) {
+  const [over, setOver] = useState(false);
+  function handleDrop(e: React.DragEvent) {
+    e.preventDefault();
+    setOver(false);
+    const id = e.dataTransfer.getData("text/appt-id");
+    if (!id) return;
+    const mins = index * SLOT_MIN;
+    const d = new Date(day);
+    d.setHours(HOUR_START + Math.floor(mins / 60), mins % 60, 0, 0);
+    onDrop(id, d.toISOString());
+  }
+  return (
+    <div
+      onDragOver={(e) => { e.preventDefault(); setOver(true); }}
+      onDragLeave={() => setOver(false)}
+      onDrop={handleDrop}
+      className={`border-b border-border/30 ${over ? "bg-primary/10" : ""} ${index % 2 === 0 ? "" : "bg-muted/10"}`}
+      style={{ height: SLOT_PX }}
+    />
+  );
+}
+
+function ApptCard({ appt, tenantName, onStatus, onDelete }: { appt: any; tenantName: string; onStatus: (id: string, status: string) => void; onDelete: (id: string) => void }) {
+  const start = new Date(appt.starts_at);
+  const end = appt.ends_at ? new Date(appt.ends_at) : new Date(start.getTime() + 30 * 60000);
+  const top = (minutesFromStart(start) / SLOT_MIN) * SLOT_PX;
+  const dur = (end.getTime() - start.getTime()) / 60000;
+  const height = Math.max(SLOT_PX, (dur / SLOT_MIN) * SLOT_PX);
+  return (
+    <div
+      draggable
+      onDragStart={(e) => { e.dataTransfer.setData("text/appt-id", appt.id); e.dataTransfer.effectAllowed = "move"; }}
+      className={`absolute inset-x-1 cursor-grab overflow-hidden rounded-md border border-border/60 p-1.5 text-[11px] shadow-sm active:cursor-grabbing ${STATUS_TONE[appt.status]}`}
+      style={{ top, height }}
+    >
+      <div className="flex items-start justify-between gap-1">
+        <div className="min-w-0">
+          <div className="font-semibold truncate">{start.toLocaleTimeString("pt-BR",{hour:"2-digit",minute:"2-digit"})} · {appt.customer_name}</div>
+          <div className="truncate opacity-80">{appt.service_name}{appt.barber_name ? ` · ${appt.barber_name}` : ""}</div>
+        </div>
+        <DropdownMenu>
+          <DropdownMenuTrigger asChild><button className="opacity-70 hover:opacity-100">⋯</button></DropdownMenuTrigger>
+          <DropdownMenuContent>
+            {Object.entries(STATUS_LABEL).map(([k, v]) => (
+              <DropdownMenuItem key={k} onClick={() => onStatus(appt.id, k)}>{v}</DropdownMenuItem>
+            ))}
+            {appt.customer_phone && (
+              <DropdownMenuItem asChild>
+                <a target="_blank" rel="noreferrer" href={buildWhatsAppLink(appt.customer_phone, reminderTemplate({ customerName: appt.customer_name, serviceName: appt.service_name, startsAt: appt.starts_at, tenantName }))}>
+                  <MessageCircle className="mr-1 h-3.5 w-3.5" /> WhatsApp
+                </a>
+              </DropdownMenuItem>
+            )}
+            <DropdownMenuItem onClick={() => onDelete(appt.id)} className="text-destructive">Excluir</DropdownMenuItem>
+          </DropdownMenuContent>
+        </DropdownMenu>
+      </div>
+      <div className="mt-0.5 text-[10px] font-semibold">{formatBRL(appt.price)}</div>
+    </div>
+  );
+}
+
+function BlockDialog({ open, onOpenChange, barbers, anchor }: { open: boolean; onOpenChange: (v: boolean) => void; barbers: any[]; anchor: Date }) {
+  const qc = useQueryClient();
+  const [form, setForm] = useState<any>({ barberId: "", date: "", start: "12:00", end: "13:00", reason: "", type: "busy" });
+  useEffect(() => {
+    if (open) setForm({ barberId: "", date: ymd(anchor), start: "12:00", end: "13:00", reason: "", type: "busy" });
+  }, [open, anchor]);
+
+  const save = useMutation({
+    mutationFn: () => {
+      const s = new Date(`${form.date}T${form.start}:00`);
+      const e = new Date(`${form.date}T${form.end}:00`);
+      if (e <= s) throw new Error("Horário final deve ser após o inicial");
+      return createBlock({
+        data: {
+          barber_id: form.barberId || null,
+          starts_at: s.toISOString(),
+          ends_at: e.toISOString(),
+          reason: form.reason || null,
+          block_type: form.type,
+        },
+      });
+    },
+    onSuccess: () => { qc.invalidateQueries({ queryKey: ["blocks"] }); toast.success("Horário bloqueado"); onOpenChange(false); },
+    onError: (e: Error) => toast.error(e.message),
+  });
+
+  return (
+    <Dialog open={open} onOpenChange={onOpenChange}>
+      <DialogContent>
+        <DialogHeader><DialogTitle className="flex items-center gap-2"><Ban className="h-4 w-4" /> Bloquear horário</DialogTitle></DialogHeader>
+        <div className="grid gap-3 sm:grid-cols-2">
+          <div className="sm:col-span-2">
+            <Label>Barbeiro (vazio = todos)</Label>
+            <Select value={form.barberId} onValueChange={(v) => setForm({ ...form, barberId: v })}>
+              <SelectTrigger><SelectValue placeholder="Toda a barbearia" /></SelectTrigger>
+              <SelectContent>{barbers.filter((b) => b.is_active).map((b) => <SelectItem key={b.id} value={b.id}>{b.name}</SelectItem>)}</SelectContent>
+            </Select>
+          </div>
+          <div className="sm:col-span-2">
+            <Label>Tipo</Label>
+            <Select value={form.type} onValueChange={(v) => setForm({ ...form, type: v })}>
+              <SelectTrigger><SelectValue /></SelectTrigger>
+              <SelectContent>
+                <SelectItem value="busy">Ocupado</SelectItem>
+                <SelectItem value="lunch">Almoço</SelectItem>
+                <SelectItem value="off">Folga</SelectItem>
+                <SelectItem value="holiday">Feriado</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
+          <div className="sm:col-span-2"><Label>Data</Label><Input type="date" value={form.date} onChange={(e) => setForm({ ...form, date: e.target.value })} /></div>
+          <div><Label>De</Label><Input type="time" value={form.start} onChange={(e) => setForm({ ...form, start: e.target.value })} /></div>
+          <div><Label>Até</Label><Input type="time" value={form.end} onChange={(e) => setForm({ ...form, end: e.target.value })} /></div>
+          <div className="sm:col-span-2"><Label>Motivo</Label><Input value={form.reason} onChange={(e) => setForm({ ...form, reason: e.target.value })} placeholder="Ex.: Almoço, Folga, Manutenção..." /></div>
+        </div>
+        <DialogFooter>
+          <Button variant="outline" onClick={() => onOpenChange(false)}>Cancelar</Button>
+          <Button onClick={() => save.mutate()} disabled={save.isPending}>{save.isPending ? "Salvando..." : "Bloquear"}</Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
+  );
+}
+
 function KpiStrip({ kpis }: { kpis: any }) {
   const t = kpis?.today ?? {};
   const m = kpis?.month ?? {};
