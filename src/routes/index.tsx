@@ -1,5 +1,7 @@
 import { createFileRoute } from "@tanstack/react-router";
-import { Link } from "@tanstack/react-router";
+import { Link, useNavigate } from "@tanstack/react-router";
+import { useEffect } from "react";
+import { supabase } from "@/integrations/supabase/client";
 import { Scissors, ShieldCheck, CalendarCheck2, BarChart4, Sparkles, ChevronRight } from "lucide-react";
 import { Button } from "@/components/ui/button";
 
@@ -24,6 +26,18 @@ export const Route = createFileRoute("/")({
 });
 
 function Index() {
+  const navigate = useNavigate();
+  useEffect(() => {
+    let active = true;
+    supabase.auth.getSession().then(({ data }) => {
+      if (active && data.session) navigate({ to: "/app", replace: true });
+    });
+    const { data: sub } = supabase.auth.onAuthStateChange((_e, session) => {
+      if (session) navigate({ to: "/app", replace: true });
+    });
+    return () => { active = false; sub.subscription.unsubscribe(); };
+  }, [navigate]);
+
   return (
     <div className="min-h-screen bg-background text-foreground">
       {/* Header */}
