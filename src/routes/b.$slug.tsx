@@ -1,6 +1,6 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useState } from "react";
-import { queryOptions, useQuery, useMutation } from "@tanstack/react-query";
+import { queryOptions, useSuspenseQuery, useQuery, useMutation } from "@tanstack/react-query";
 import { getPublicBooking, getPublicAvailability, createPublicBooking } from "@/lib/public-booking.functions";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -42,10 +42,10 @@ function todayISO() {
 
 function PublicBookingPage() {
   const { slug } = Route.useParams();
-  const { data } = useQuery(bookingQ(slug));
-  const tenant = data!.tenant;
-  const services = data!.services;
-  const barbers = data!.barbers;
+  const { data } = useSuspenseQuery(bookingQ(slug));
+  const tenant = data.tenant;
+  const services = data.services;
+  const barbers = data.barbers;
 
   const [serviceId, setServiceId] = useState<string>("");
   const [barberId, setBarberId] = useState<string>("");
