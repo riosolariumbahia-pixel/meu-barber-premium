@@ -46,17 +46,21 @@ const business: NavItem[] = [
 ];
 
 export function AppSidebar({ tenantName }: { tenantName?: string }) {
-  const { state } = useSidebar();
+  const { state, isMobile, setOpenMobile } = useSidebar();
   const collapsed = state === "collapsed";
   const path = useRouterState({ select: (s) => s.location.pathname });
 
   const isActive = (url: string, exact?: boolean) =>
     exact ? path === url : path === url || path.startsWith(url + "/");
 
+  const closeOnMobile = () => {
+    if (isMobile) setOpenMobile(false);
+  };
+
   return (
     <Sidebar collapsible="icon">
       <SidebarHeader className="border-b border-sidebar-border">
-        <Link to="/app" className="flex items-center gap-2 px-2 py-2">
+        <Link to="/app" onClick={closeOnMobile} className="flex items-center gap-2 px-2 py-2">
           <span className="grid h-8 w-8 shrink-0 place-items-center rounded-md bg-primary text-primary-foreground">
             <Scissors className="h-4 w-4" />
           </span>
@@ -76,7 +80,7 @@ export function AppSidebar({ tenantName }: { tenantName?: string }) {
               {main.map((item) => (
                 <SidebarMenuItem key={item.url}>
                   <SidebarMenuButton asChild isActive={isActive(item.url, item.exact)}>
-                    <Link to={item.url} className="flex items-center gap-2">
+                    <Link to={item.url} onClick={closeOnMobile} className="flex items-center gap-2">
                       <item.icon className="h-4 w-4" />
                       {!collapsed && <span>{item.title}</span>}
                     </Link>
@@ -94,7 +98,7 @@ export function AppSidebar({ tenantName }: { tenantName?: string }) {
               {business.map((item) => (
                 <SidebarMenuItem key={item.url}>
                   <SidebarMenuButton asChild isActive={isActive(item.url)}>
-                    <Link to={item.url} className="flex items-center gap-2">
+                    <Link to={item.url} onClick={closeOnMobile} className="flex items-center gap-2">
                       <item.icon className="h-4 w-4" />
                       {!collapsed && <span>{item.title}</span>}
                     </Link>
