@@ -7,7 +7,7 @@ const onboardingSchema = z.object({
   slug: z
     .string()
     .trim()
-    .min(3)
+    .min(1)
     .max(40)
     .regex(/^[a-z0-9-]+$/, "Apenas letras minúsculas, números e hífen"),
   city: z.string().trim().min(2).max(80),
