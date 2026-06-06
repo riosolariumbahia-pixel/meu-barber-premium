@@ -38,11 +38,11 @@ export const getPublicBooking = createServerFn({ method: "GET" })
   });
 
 function parseHours(h: string | null | undefined): [number, number] {
-  if (!h) return [9, 18];
+  if (!h) return [8, 20];
   const m = h.match(/(\d{1,2}):?(\d{0,2})\s*-\s*(\d{1,2}):?(\d{0,2})/);
-  if (!m) return [9, 18];
-  const s = parseInt(m[1] || "9", 10) + (parseInt(m[2] || "0", 10) / 60);
-  const e = parseInt(m[3] || "18", 10) + (parseInt(m[4] || "0", 10) / 60);
+  if (!m) return [8, 20];
+  const s = parseInt(m[1] || "8", 10) + (parseInt(m[2] || "0", 10) / 60);
+  const e = parseInt(m[3] || "20", 10) + (parseInt(m[4] || "0", 10) / 60);
   return [s, e];
 }
 
@@ -63,7 +63,7 @@ export const getPublicAvailability = createServerFn({ method: "GET" })
     const dayStart = new Date(`${data.date}T00:00:00`);
     const dayEnd = new Date(dayStart.getTime() + 24 * 3600 * 1000);
 
-    let hours: [number, number] = [9, 18];
+    let hours: [number, number] = [8, 20];
     if (data.barberId) {
       const { data: barber } = await db.from("barbers").select("hours").eq("tenant_id", tenant.id).eq("id", data.barberId).maybeSingle();
       hours = parseHours(barber?.hours ?? null);
