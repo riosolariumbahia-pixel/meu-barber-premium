@@ -37,13 +37,12 @@ export const getPublicBooking = createServerFn({ method: "GET" })
     };
   });
 
-function parseHours(h: string | null | undefined): [number, number] {
-  if (!h) return [8, 20];
-  const m = h.match(/(\d{1,2}):?(\d{0,2})\s*-\s*(\d{1,2}):?(\d{0,2})/);
-  if (!m) return [8, 20];
-  const s = parseInt(m[1] || "8", 10) + (parseInt(m[2] || "0", 10) / 60);
-  const e = parseInt(m[3] || "20", 10) + (parseInt(m[4] || "0", 10) / 60);
-  return [s, e];
+const PUBLIC_TIMEZONE_OFFSET = "-03:00";
+
+function brazilDateAt(date: string, minutesFromMidnight: number) {
+  const hours = Math.floor(minutesFromMidnight / 60).toString().padStart(2, "0");
+  const minutes = (minutesFromMidnight % 60).toString().padStart(2, "0");
+  return new Date(`${date}T${hours}:${minutes}:00${PUBLIC_TIMEZONE_OFFSET}`);
 }
 
 export const getPublicAvailability = createServerFn({ method: "GET" })
@@ -60,7 +59,7 @@ export const getPublicAvailability = createServerFn({ method: "GET" })
     const db = await admin();
     const { data: service } = await db.from("services").select("id, duration_minutes").eq("tenant_id", tenant.id).eq("id", data.serviceId).maybeSingle();
     if (!service) throw new Error("Serviço inválido");
-    const dayStart = new Date(`${data.date}T00:00:00`);
+    const dayStart = brazilDateAt(data.date, 0);
     const dayEnd = new Date(dayStart.getTime() + 24 * 3600 * 1000);
 
     const hours: [number, number] = [9, 20];
@@ -80,7 +79,7 @@ export const getPublicAvailability = createServerFn({ method: "GET" })
     const slots: string[] = [];
     const now = Date.now();
     for (let mins = hours[0] * 60; mins + duration <= hours[1] * 60; mins += step) {
-      const slotStart = new Date(dayStart.getTime() + mins * 60000);
+      const slotStart = brazilDateAt(data.date, mins);
       if (slotStart.getTime() < now + 30 * 60000) continue;
       const slotEnd = new Date(slotStart.getTime() + duration * 60000);
       const conflict = (appts ?? []).some((a: any) => {

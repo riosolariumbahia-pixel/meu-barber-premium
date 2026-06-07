@@ -1,15 +1,9 @@
-## Problema
+Plano de correção:
 
-No link público `/b/{slug}` os horários aparecem somente até 14h30 porque `getPublicAvailability` lê o campo `hours` do barbeiro selecionado (ex.: "09:00-14:30") e usa isso como limite. O padrão de 8–20 só vale quando não há barbeiro escolhido.
+1. Ajustar a geração dos horários no link público de agendamento para criar os slots no fuso horário de São Paulo/Brasil, não em UTC.
+2. Manter o intervalo público fixo de 09:00 até 20:00, com opções a cada 30 minutos.
+3. Garantir que o último horário disponível respeite a duração do serviço — por exemplo, serviço de 30 minutos pode começar até 19:30 para terminar às 20:00.
+4. Preservar as regras atuais de conflito com agendamentos existentes e bloqueio de horários passados.
+5. Validar no link `/b/barbershop` que os horários exibidos para o cliente começam em 09:00 e vão até o limite correto antes de concluir.
 
-## Correção
-
-Em `src/lib/public-booking.functions.ts`, dentro de `getPublicAvailability`:
-
-- Remover a leitura de `barber.hours` e a chamada a `parseHours`.
-- Fixar `hours = [9, 20]` para todos os casos (com ou sem barbeiro selecionado).
-- Manter o resto da lógica (duração, passo de 30 min, conflitos, filtro de horários passados) intacta.
-
-Isso garante que o cliente sempre veja slots de 9h às 20h, independentemente das `hours` cadastradas no barbeiro (que continuam servindo apenas para a agenda interna do SaaS).
-
-Nenhum outro arquivo precisa mudar.
+Detalhe técnico: o bug acontece porque o código usa `new Date(`${date}T00:00:00`)`, que no servidor é interpretado em UTC. Ao chegar no navegador no horário do Brasil, aparece 3 horas antes: 09:00 vira 06:00 e 19:30 vira 16:30. A correção será montar as datas dos slots com offset `-03:00` para o horário público brasileiro.
