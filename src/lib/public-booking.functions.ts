@@ -63,11 +63,7 @@ export const getPublicAvailability = createServerFn({ method: "GET" })
     const dayStart = new Date(`${data.date}T00:00:00`);
     const dayEnd = new Date(dayStart.getTime() + 24 * 3600 * 1000);
 
-    let hours: [number, number] = [8, 20];
-    if (data.barberId) {
-      const { data: barber } = await db.from("barbers").select("hours").eq("tenant_id", tenant.id).eq("id", data.barberId).maybeSingle();
-      hours = parseHours(barber?.hours ?? null);
-    }
+    const hours: [number, number] = [9, 20];
 
     const apptQuery = db
       .from("appointments")
