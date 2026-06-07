@@ -12,6 +12,8 @@ import { toast } from "sonner";
 const bookingQ = (slug: string) =>
   queryOptions({ queryKey: ["public-booking", slug], queryFn: () => getPublicBooking({ data: { slug } }) });
 
+const PUBLIC_TIME_ZONE = "America/Sao_Paulo";
+
 export const Route = createFileRoute("/b/$slug")({
   loader: ({ context, params }) => context.queryClient.ensureQueryData(bookingQ(params.slug)),
   head: ({ loaderData }: any) => ({
@@ -36,8 +38,16 @@ export const Route = createFileRoute("/b/$slug")({
 });
 
 function todayISO() {
-  const d = new Date();
-  return d.toISOString().slice(0, 10);
+  return new Intl.DateTimeFormat("en-CA", {
+    timeZone: PUBLIC_TIME_ZONE,
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit",
+  }).format(new Date());
+}
+
+function publicTime(iso: string) {
+  return new Date(iso).toLocaleTimeString("pt-BR", { timeZone: PUBLIC_TIME_ZONE, hour: "2-digit", minute: "2-digit" });
 }
 
 function PublicBookingPage() {
@@ -82,7 +92,7 @@ function PublicBookingPage() {
           <div className="mx-auto flex h-14 w-14 items-center justify-center rounded-full bg-primary/10 text-primary"><Check className="h-7 w-7" /></div>
           <h2 className="mt-4 text-xl font-semibold">Agendamento confirmado!</h2>
           <p className="mt-2 text-sm text-muted-foreground">
-            {d.toLocaleDateString("pt-BR", { weekday: "long", day: "2-digit", month: "long" })} às {d.toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit" })}
+            {d.toLocaleDateString("pt-BR", { timeZone: PUBLIC_TIME_ZONE, weekday: "long", day: "2-digit", month: "long" })} às {publicTime(done.startsAt)}
           </p>
           <p className="mt-1 text-sm text-muted-foreground">Você receberá um lembrete 1 hora antes pelo WhatsApp.</p>
           <Button className="mt-6" onClick={() => { setDone(null); setSlot(""); setServiceId(""); setBarberId(""); }}>Fazer outro</Button>
@@ -137,7 +147,7 @@ function PublicBookingPage() {
               ) : (
                 <div className="mt-2 flex flex-wrap gap-2">
                   {availability.data!.slots.map((iso) => {
-                    const t = new Date(iso).toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit" });
+                    const t = publicTime(iso);
                     return <Chip key={iso} selected={slot === iso} onClick={() => setSlot(iso)}>{t}</Chip>;
                   })}
                 </div>
