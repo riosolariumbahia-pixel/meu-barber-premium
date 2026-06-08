@@ -74,6 +74,25 @@ export const getPublicAvailability = createServerFn({ method: "GET" })
     if (data.barberId) apptQuery.eq("barber_id", data.barberId);
     const { data: appts } = await apptQuery;
 
+    // Carrega bloqueios que cobrem qualquer parte do dia (start < dayEnd e end > dayStart)
+    const blocksQuery = db
+      .from("appointment_blocks")
+      .select("starts_at, ends_at, barber_id")
+      .eq("tenant_id", tenant.id)
+      .lt("starts_at", dayEnd.toISOString())
+      .gt("ends_at", dayStart.toISOString());
+    const { data: blocks } = await blocksQuery;
+
+    // Lista de barbeiros ativos para suportar "sem preferência"
+    const { data: activeBarbers } = await db
+      .from("barbers")
+      .select("id")
+      .eq("tenant_id", tenant.id)
+      .eq("is_active", true);
+    const barberIds: string[] = data.barberId
+      ? [data.barberId]
+      : (activeBarbers ?? []).map((b: any) => b.id);
+
     const duration = Number(service.duration_minutes) || 30;
     const step = 30;
     const slots: string[] = [];
@@ -82,12 +101,40 @@ export const getPublicAvailability = createServerFn({ method: "GET" })
       const slotStart = brazilDateAt(data.date, mins);
       if (slotStart.getTime() < now + 30 * 60000) continue;
       const slotEnd = new Date(slotStart.getTime() + duration * 60000);
-      const conflict = (appts ?? []).some((a: any) => {
-        const s = new Date(a.starts_at).getTime();
-        const e = a.ends_at ? new Date(a.ends_at).getTime() : s + 30 * 60000;
+
+      // Bloqueio global (sem barbeiro) impede o slot para todos
+      const globalBlock = (blocks ?? []).some((b: any) => {
+        if (b.barber_id) return false;
+        const s = new Date(b.starts_at).getTime();
+        const e = new Date(b.ends_at).getTime();
         return s < slotEnd.getTime() && e > slotStart.getTime();
       });
-      if (!conflict) slots.push(slotStart.toISOString());
+      if (globalBlock) continue;
+
+      // Slot é disponível se pelo menos um barbeiro candidato está livre
+      const someoneFree = barberIds.length === 0
+        ? !(appts ?? []).some((a: any) => {
+            const s = new Date(a.starts_at).getTime();
+            const e = a.ends_at ? new Date(a.ends_at).getTime() : s + 30 * 60000;
+            return s < slotEnd.getTime() && e > slotStart.getTime();
+          })
+        : barberIds.some((bid) => {
+            const apptClash = (appts ?? []).some((a: any) => {
+              if (a.barber_id !== bid) return false;
+              const s = new Date(a.starts_at).getTime();
+              const e = a.ends_at ? new Date(a.ends_at).getTime() : s + 30 * 60000;
+              return s < slotEnd.getTime() && e > slotStart.getTime();
+            });
+            if (apptClash) return false;
+            const blockClash = (blocks ?? []).some((b: any) => {
+              if (b.barber_id && b.barber_id !== bid) return false;
+              const s = new Date(b.starts_at).getTime();
+              const e = new Date(b.ends_at).getTime();
+              return s < slotEnd.getTime() && e > slotStart.getTime();
+            });
+            return !blockClash;
+          });
+      if (someoneFree) slots.push(slotStart.toISOString());
     }
     return { slots };
   });
@@ -115,16 +162,20 @@ export const createPublicBooking = createServerFn({ method: "POST" })
     const { data: service } = await db.from("services").select("id, name, price, duration_minutes").eq("tenant_id", tenant.id).eq("id", data.serviceId).maybeSingle();
     if (!service) throw new Error("Serviço inválido");
 
-    let barberName: string | null = null;
-    if (data.barberId) {
-      const { data: barber } = await db.from("barbers").select("id, name").eq("tenant_id", tenant.id).eq("id", data.barberId).maybeSingle();
-      if (!barber) throw new Error("Barbeiro inválido");
-      barberName = barber.name;
-    }
-
     const starts = new Date(data.startsAt);
     const ends = new Date(starts.getTime() + Number(service.duration_minutes) * 60000);
     if (starts.getTime() < Date.now() + 15 * 60000) throw new Error("Escolha um horário futuro.");
+
+    // Garante 09:00–20:00 no fuso de São Paulo
+    const hhmm = new Intl.DateTimeFormat("en-GB", { timeZone: "America/Sao_Paulo", hour: "2-digit", minute: "2-digit", hour12: false }).format(starts);
+    const endHhmm = new Intl.DateTimeFormat("en-GB", { timeZone: "America/Sao_Paulo", hour: "2-digit", minute: "2-digit", hour12: false }).format(ends);
+    const [sh, sm] = hhmm.split(":").map(Number);
+    const [eh, em] = endHhmm.split(":").map(Number);
+    const startMin = sh * 60 + sm;
+    const endMin = eh * 60 + em;
+    if (startMin < 9 * 60 || endMin > 20 * 60 || startMin % 30 !== 0) {
+      throw new Error("Horário fora do funcionamento (09:00–20:00).");
+    }
 
     // Rate limit: máx 3 agendamentos do mesmo telefone na barbearia nas últimas 24h
     const phoneDigits = data.customer.phone.replace(/\D/g, "");
@@ -137,23 +188,62 @@ export const createPublicBooking = createServerFn({ method: "POST" })
       .gte("created_at", since);
     if ((recent ?? 0) >= 3) throw new Error("Limite de agendamentos atingido. Entre em contato com a barbearia.");
 
-    // Conflito (mesmo barbeiro, intervalo sobreposto)
+    // Resolve barbeiro: se informado, valida; se não, escolhe automaticamente um livre
+    let chosenBarberId: string | null = null;
+    let barberName: string | null = null;
+
+    const candidates: { id: string; name: string }[] = [];
     if (data.barberId) {
+      const { data: barber } = await db.from("barbers").select("id, name, is_active").eq("tenant_id", tenant.id).eq("id", data.barberId).maybeSingle();
+      if (!barber || !barber.is_active) throw new Error("Barbeiro inválido");
+      candidates.push({ id: barber.id, name: barber.name });
+    } else {
+      const { data: bs } = await db.from("barbers").select("id, name").eq("tenant_id", tenant.id).eq("is_active", true).order("name");
+      (bs ?? []).forEach((b: any) => candidates.push({ id: b.id, name: b.name }));
+    }
+    if (candidates.length === 0) throw new Error("Nenhum barbeiro disponível.");
+
+    // Bloqueio global (sem barbeiro) já invalida o horário inteiro
+    const { data: globalBlocks } = await db
+      .from("appointment_blocks")
+      .select("starts_at, ends_at")
+      .eq("tenant_id", tenant.id)
+      .is("barber_id", null)
+      .lt("starts_at", ends.toISOString())
+      .gt("ends_at", starts.toISOString());
+    if ((globalBlocks ?? []).length > 0) throw new Error("Este horário já foi reservado.");
+
+    for (const cand of candidates) {
       const { data: clash } = await db
         .from("appointments")
         .select("id, starts_at, ends_at")
         .eq("tenant_id", tenant.id)
-        .eq("barber_id", data.barberId)
+        .eq("barber_id", cand.id)
         .not("status", "in", "(cancelled,noshow)")
         .lt("starts_at", ends.toISOString())
         .gte("starts_at", new Date(starts.getTime() - 4 * 3600 * 1000).toISOString());
-      const conflict = (clash ?? []).some((a: any) => {
+      const apptClash = (clash ?? []).some((a: any) => {
         const s = new Date(a.starts_at).getTime();
         const e = a.ends_at ? new Date(a.ends_at).getTime() : s + 30 * 60000;
         return s < ends.getTime() && e > starts.getTime();
       });
-      if (conflict) throw new Error("Esse horário acabou de ser preenchido. Escolha outro.");
+      if (apptClash) continue;
+
+      const { data: bClash } = await db
+        .from("appointment_blocks")
+        .select("starts_at, ends_at")
+        .eq("tenant_id", tenant.id)
+        .eq("barber_id", cand.id)
+        .lt("starts_at", ends.toISOString())
+        .gt("ends_at", starts.toISOString());
+      if ((bClash ?? []).length > 0) continue;
+
+      chosenBarberId = cand.id;
+      barberName = cand.name;
+      break;
     }
+
+    if (!chosenBarberId) throw new Error("Este horário já foi reservado.");
 
     // Upsert cliente por telefone dentro do tenant
     let clientId: string | null = null;
@@ -178,7 +268,7 @@ export const createPublicBooking = createServerFn({ method: "POST" })
         client_id: clientId,
         customer_name: data.customer.name,
         customer_phone: phoneDigits,
-        barber_id: data.barberId || null,
+        barber_id: chosenBarberId,
         barber_name: barberName,
         service_id: service.id,
         service_name: service.name,
