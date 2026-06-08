@@ -1,7 +1,8 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
-import { useState } from "react";
-import { queryOptions, useSuspenseQuery, useQuery, useMutation } from "@tanstack/react-query";
+import { useEffect, useState } from "react";
+import { queryOptions, useSuspenseQuery, useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { getPublicBooking, getPublicAvailability, createPublicBooking } from "@/lib/public-booking.functions";
+import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -56,6 +57,19 @@ function PublicBookingPage() {
   const tenant = data.tenant;
   const services = data.services;
   const barbers = data.barbers;
+  const qc = useQueryClient();
+
+  useEffect(() => {
+    if (!tenant?.id) return;
+    const channel = supabase
+      .channel(`public-agenda-${tenant.id}`)
+      .on("postgres_changes", { event: "INSERT", schema: "public", table: "public_agenda_events", filter: `tenant_id=eq.${tenant.id}` }, () => {
+        qc.invalidateQueries({ queryKey: ["public-availability", slug] });
+        qc.invalidateQueries({ queryKey: ["public-booking", slug] });
+      })
+      .subscribe();
+    return () => { supabase.removeChannel(channel); };
+  }, [tenant?.id, slug, qc]);
 
   const [serviceId, setServiceId] = useState<string>("");
   const [barberId, setBarberId] = useState<string>("");
