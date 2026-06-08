@@ -3,6 +3,7 @@ import { useEffect, useMemo, useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { Plus, ChevronLeft, ChevronRight, MessageCircle, Zap, Share2, Bell, CalendarDays, CalendarRange, Calendar as CalIcon, Ban, Trash2 } from "lucide-react";
 import { toast } from "sonner";
+import { supabase } from "@/integrations/supabase/client";
 import { listAppointments, createAppointment, setAppointmentStatus, deleteAppointment, createWalkIn, listPendingReminders, markReminderSent, getAgendaKpis } from "@/lib/appointments.functions";
 import { listBlocks, createBlock, deleteBlock, moveAppointment } from "@/lib/blocks.functions";
 import { listClients } from "@/lib/clients.functions";
@@ -89,6 +90,30 @@ function AgendaPage() {
     refetchInterval: 60_000,
   });
   const tenantName = tenant?.name ?? "Barbearia";
+  const tenantId = tenant?.id as string | undefined;
+
+  // Realtime: refaz a leitura quando algo muda no banco
+  useEffect(() => {
+    if (!tenantId) return;
+    const channel = supabase
+      .channel(`agenda-${tenantId}`)
+      .on("postgres_changes", { event: "*", schema: "public", table: "appointments", filter: `tenant_id=eq.${tenantId}` }, () => {
+        qc.invalidateQueries({ queryKey: ["appointments"] });
+        qc.invalidateQueries({ queryKey: ["agenda-kpis"] });
+        qc.invalidateQueries({ queryKey: ["pending-reminders"] });
+      })
+      .on("postgres_changes", { event: "*", schema: "public", table: "appointment_blocks", filter: `tenant_id=eq.${tenantId}` }, () => {
+        qc.invalidateQueries({ queryKey: ["blocks"] });
+      })
+      .on("postgres_changes", { event: "*", schema: "public", table: "barbers", filter: `tenant_id=eq.${tenantId}` }, () => {
+        qc.invalidateQueries({ queryKey: ["barbers"] });
+      })
+      .on("postgres_changes", { event: "*", schema: "public", table: "services", filter: `tenant_id=eq.${tenantId}` }, () => {
+        qc.invalidateQueries({ queryKey: ["services"] });
+      })
+      .subscribe();
+    return () => { supabase.removeChannel(channel); };
+  }, [tenantId, qc]);
 
   const sendReminder = useMutation({
     mutationFn: (id: string) => markReminderSent({ data: { id } }),
@@ -262,8 +287,8 @@ function AgendaPage() {
   );
 }
 
-const HOUR_START = 7;
-const HOUR_END = 22;
+const HOUR_START = 9;
+const HOUR_END = 20;
 const SLOT_MIN = 30;
 const SLOT_PX = 28;
 const ROWS = ((HOUR_END - HOUR_START) * 60) / SLOT_MIN;
