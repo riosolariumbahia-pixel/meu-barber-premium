@@ -52,6 +52,17 @@ export const createAppointment = createServerFn({ method: "POST" })
   .handler(async ({ data, context }) => {
     const { supabase, userId } = context;
     const tenantId = await getTenantId(supabase, userId);
+    if (data.barber_id) {
+      const { data: conflict, error: cErr } = await supabase.rpc("check_appointment_conflict", {
+        _tenant_id: tenantId,
+        _barber_id: data.barber_id,
+        _starts_at: data.starts_at,
+        _ends_at: data.ends_at ?? null,
+        _exclude_id: null,
+      });
+      if (cErr) throw new Error(cErr.message);
+      if (conflict) throw new Error("Este horário já foi reservado.");
+    }
     const payload = {
       tenant_id: tenantId,
       client_id: data.client_id || null,
