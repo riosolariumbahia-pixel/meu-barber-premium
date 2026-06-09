@@ -45,7 +45,7 @@ function SignupPage() {
       toast.error("Não foi possível cadastrar", { description: error.message });
       return;
     }
-    toast.success("Conta criada!", { description: "Confirme seu e-mail para continuar." });
+    toast.success("Conta criada!", { description: "Preparando sua barbearia..." });
   }
 
   async function onGoogle() {
