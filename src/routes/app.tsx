@@ -1,6 +1,5 @@
 import { createFileRoute, Outlet, redirect, useNavigate } from "@tanstack/react-router";
 import { queryOptions, useSuspenseQuery } from "@tanstack/react-query";
-import { useEffect } from "react";
 import { Moon, Sun, LogOut, ChevronsUpDown } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { getMyContext } from "@/lib/tenant.functions";
@@ -32,7 +31,11 @@ export const Route = createFileRoute("/app")({
     const { data, error } = await supabase.auth.getUser();
     if (error || !data.user) throw redirect({ to: "/login" });
   },
-  loader: ({ context }) => context.queryClient.ensureQueryData(ctxQuery),
+  loader: async ({ context }) => {
+    const ctx = await context.queryClient.ensureQueryData(ctxQuery);
+    if (!ctx?.currentTenant) throw redirect({ to: "/onboarding" });
+    return ctx;
+  },
   component: AppShell,
   errorComponent: ({ error }) => (
     <div className="grid min-h-screen place-items-center p-6 text-center">
@@ -52,21 +55,13 @@ function AppShell() {
     | { name: string; subscription_status: string; trial_ends_at: string | null }
     | null;
 
-  useEffect(() => {
-    if (!data.currentTenant) navigate({ to: "/onboarding" });
-  }, [data.currentTenant, navigate]);
-
   async function onLogout() {
     await supabase.auth.signOut();
     navigate({ to: "/login" });
   }
 
   if (!tenant) {
-    return (
-      <div className="grid min-h-screen place-items-center text-sm text-muted-foreground">
-        Redirecionando para o onboarding…
-      </div>
-    );
+    return null;
   }
 
   return (
