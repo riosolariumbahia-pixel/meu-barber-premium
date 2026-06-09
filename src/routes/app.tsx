@@ -33,6 +33,8 @@ export const Route = createFileRoute("/app")({
   },
   loader: async ({ context }) => {
     const ctx = await context.queryClient.ensureQueryData(ctxQuery);
+    // ensure_user_tenant garante que sempre exista barbearia.
+    // Se ainda assim faltar, manda para onboarding como fallback.
     if (!ctx?.currentTenant) throw redirect({ to: "/onboarding" });
     return ctx;
   },

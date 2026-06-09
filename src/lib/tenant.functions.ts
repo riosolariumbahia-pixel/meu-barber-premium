@@ -31,27 +31,19 @@ export const getMyContext = createServerFn({ method: "GET" })
   .middleware([requireSupabaseAuth])
   .handler(async ({ context }) => {
     const { supabase, userId } = context;
+
+    // Auto-recupera: garante perfil + barbearia + membership + current_tenant_id
+    const { error: ensureErr } = await supabase.rpc("ensure_user_tenant");
+    if (ensureErr) {
+      console.error("ensure_user_tenant failed:", ensureErr);
+      throw new Error(`Não foi possível preparar sua barbearia: ${ensureErr.message}`);
+    }
+
     const { data: profile } = await supabase
       .from("profiles")
       .select("id, full_name, avatar_url, current_tenant_id")
       .eq("id", userId)
       .maybeSingle();
-
-    // CRÍTICO: Auto-criar perfil se não existir (novo usuário após signup)
-    if (!profile) {
-      const { error: createErr } = await supabase.from("profiles").insert({
-        id: userId,
-      });
-      if (createErr) throw new Error(`Erro ao criar perfil automaticamente: ${createErr.message}`);
-
-      // Retornar perfil vazio para redirecionar ao onboarding
-      return {
-        profile: { id: userId, full_name: null, avatar_url: null, current_tenant_id: null },
-        memberships: [],
-        currentTenant: null,
-        currentRole: null,
-      };
-    }
 
     const { data: memberships } = await supabase
       .from("tenant_members")

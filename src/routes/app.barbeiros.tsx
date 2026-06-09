@@ -84,7 +84,7 @@ function BarbersPage() {
 
 function BarberDialog({ open, onOpenChange, barber }: { open: boolean; onOpenChange: (v: boolean) => void; barber: any }) {
   const qc = useQueryClient();
-  const [form, setForm] = useState<any>({ name: "", specialty: "", role: "", avatar_url: "", commission_type: "percent", commission_value: 50, hours: "09:00-18:00", is_active: true });
+  const [form, setForm] = useState<any>({ name: "", specialty: "", role: "", avatar_url: "", commission_type: "percent", commission_value: 50, hours: "09:00-20:00", is_active: true });
   useMemo(() => {
     if (open) setForm({
       name: barber?.name ?? "",
@@ -93,7 +93,7 @@ function BarberDialog({ open, onOpenChange, barber }: { open: boolean; onOpenCha
       avatar_url: barber?.avatar_url ?? "",
       commission_type: barber?.commission_type ?? "percent",
       commission_value: Number(barber?.commission_value ?? 50),
-      hours: barber?.hours ?? "09:00-18:00",
+      hours: barber?.hours ?? "09:00-20:00",
       is_active: barber?.is_active ?? true,
     });
   }, [open, barber]);
@@ -110,7 +110,7 @@ function BarberDialog({ open, onOpenChange, barber }: { open: boolean; onOpenCha
           <div className="sm:col-span-2"><Label>Nome*</Label><Input value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} /></div>
           <div><Label>Especialidade</Label><Input value={form.specialty} onChange={(e) => setForm({ ...form, specialty: e.target.value })} /></div>
           <div><Label>Função</Label><Input value={form.role} onChange={(e) => setForm({ ...form, role: e.target.value })} /></div>
-          <div><Label>Horário</Label><Input value={form.hours} onChange={(e) => setForm({ ...form, hours: e.target.value })} placeholder="09:00-18:00" /></div>
+          <div><Label>Horário</Label><Input value={form.hours} onChange={(e) => setForm({ ...form, hours: e.target.value })} placeholder="09:00-20:00" /></div>
           <div>
             <Label>Tipo de comissão</Label>
             <Select value={form.commission_type} onValueChange={(v) => setForm({ ...form, commission_type: v })}>
