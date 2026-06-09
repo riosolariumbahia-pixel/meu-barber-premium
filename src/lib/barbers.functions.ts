@@ -48,7 +48,7 @@ export const upsertBarber = createServerFn({ method: "POST" })
       avatar_url: data.avatar_url || null,
       commission_type: data.commission_type,
       commission_value: data.commission_value,
-      hours: data.hours || "09:00-18:00",
+      hours: data.hours || "09:00-20:00",
       is_active: data.is_active,
     };
     if (data.id) {

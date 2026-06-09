@@ -631,6 +631,7 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      _unique_tenant_slug: { Args: { _base: string }; Returns: string }
       agenda_kpis_for_tenant: {
         Args: { _day: string; _tenant_id: string }
         Returns: Json
@@ -674,6 +675,34 @@ export type Database = {
         }
       }
       current_tenant_id: { Args: never; Returns: string }
+      ensure_user_tenant: {
+        Args: never
+        Returns: {
+          cashback_percent: number
+          city: string | null
+          created_at: string
+          id: string
+          instagram_handle: string | null
+          is_active: boolean
+          logo_color: string | null
+          name: string
+          pix_key: string | null
+          pix_key_type: string | null
+          points_per_real: number
+          slug: string
+          subscription_plan: Database["public"]["Enums"]["subscription_plan"]
+          subscription_status: Database["public"]["Enums"]["subscription_status"]
+          trial_ends_at: string | null
+          updated_at: string
+          whatsapp_number: string | null
+        }
+        SetofOptions: {
+          from: "*"
+          to: "tenants"
+          isOneToOne: true
+          isSetofReturn: false
+        }
+      }
       has_role: {
         Args: {
           _role: Database["public"]["Enums"]["app_role"]
