@@ -1,102 +1,40 @@
-Plano de correção crítica do SaaS de barbearia
 
-Diagnóstico encontrado
-- O link público carrega serviços e barbeiros, mas a disponibilidade ainda não considera bloqueios da barbearia (`appointment_blocks`).
-- A agenda interna não possui assinatura em tempo real; ela depende de cache/refetch manual do React Query.
-- As tabelas necessárias não estão publicadas no Realtime (`supabase_realtime` está vazio).
-- Não há proteção forte no banco contra dois agendamentos sobrepostos para o mesmo barbeiro.
-- A criação pública permite `barber_id` vazio; isso dificulta conflito por barbeiro e pode permitir ocupação incorreta do horário.
-- A agenda interna está desenhada de 07:00 a 22:00, enquanto a regra solicitada é 09:00 a 20:00.
-- Existe uma estrutura de bloqueio (`appointment_blocks`) que já cobre o papel de `blocked_slots`: `id`, barbearia/tenant, barbeiro, início, fim, motivo e criação. Não é necessário duplicar tabela; a correção é fazer o link público respeitar essa estrutura.
+## Causa raiz identificada
 
-Implementação planejada
+Após uma investigação completa do banco, RLS, triggers e código de frontend, o problema **não é** falta de criação de perfil ou políticas RLS — todos estão corretos:
 
-1. Banco de dados e regras de segurança
-- Habilitar Realtime nas tabelas principais:
-  - `appointments`
-  - `appointment_blocks`
-  - `barbers`
-  - `services`
-- Adicionar grants explícitos nas tabelas usadas pelo app para garantir acesso correto pelas funções autenticadas e pelo backend.
-- Criar validação no banco para impedir agendamento fora de 09:00–20:00.
-- Criar validação no banco para impedir início fora dos intervalos de 30 minutos.
-- Criar proteção contra conflito de agendamento para o mesmo barbeiro no mesmo intervalo.
-- Criar proteção contra agendamento em horário bloqueado.
-- Ajustar a função de conflito existente para retornar a mensagem esperada quando houver ocupação:
-  - `Este horário já foi reservado.`
-- Criar uma tabela leve de eventos públicos de agenda, sem dados pessoais, para sinalizar mudanças em tempo real no link público com segurança. Ela terá apenas referência da barbearia, tipo de evento e data/hora do evento, sem nome, telefone ou serviço do cliente.
+- Trigger `on_auth_user_created` em `auth.users` cria o perfil automaticamente.
+- `getMyContext` já tem fallback para criar perfil se faltar.
+- RLS em `services`, `barbers`, `tenants`, `tenant_members`, `profiles` está correta.
+- RPC `create_tenant_with_owner` cria tenant + membership owner + atualiza `current_tenant_id` numa única transação SECURITY DEFINER.
 
-2. Agendamento público do cliente
-- Manter horário público fixo em São Paulo/Brasil: 09:00 até 20:00.
-- Gerar slots de 30 em 30 minutos.
-- Para serviço de 30 minutos, permitir início até 19:30 para terminar às 20:00.
-- Corrigir disponibilidade para considerar:
-  - agendamentos existentes
-  - bloqueios da barbearia
-  - barbeiro selecionado
-  - “sem preferência”, atribuindo automaticamente um barbeiro realmente livre antes de gravar
-  - horários passados indisponíveis
-- Na confirmação pública, revalidar tudo novamente antes de salvar:
-  - serviço ativo
-  - barbeiro ativo ou barbeiro livre automático
-  - horário dentro de 09:00–20:00
-  - sem conflito com agendamento existente
-  - sem conflito com bloqueio
-- Se o horário tiver sido ocupado entre a listagem e a confirmação, exibir:
-  - `Este horário já foi reservado.`
-- Após criar o agendamento, invalidar/refazer a consulta de disponibilidade.
+**O bug real** está em `src/routes/onboarding.tsx`: após `createTenant` chamar `navigate({ to: "/app" })`, a query `["app","context"]` continua em cache com `currentTenant = null` (estado anterior à criação). Em `src/routes/app.tsx`, o `useEffect` vê `!data.currentTenant` e redireciona de volta para `/onboarding`. Resultado:
 
-3. Agenda interna da barbearia
-- Padronizar a linha do tempo visual para 09:00–20:00.
-- Ajustar criação e movimentação de agendamento interno para validar:
-  - horário comercial
-  - intervalo de 30 minutos
-  - conflito com agendamento existente
-  - conflito com bloqueio
-- Ao criar, cancelar, excluir, remarcar ou alterar status, invalidar também KPIs, lembretes e disponibilidade relacionada.
-- Corrigir bloqueios para refletirem imediatamente no link público.
+- Em contas novas com tenant recém-criado → loop / tela "Redirecionando para o onboarding…" travada.
+- O usuário nunca chega a ver Serviços/Barbeiros/Agenda, porque a casca do `/app` nunca renderiza.
 
-4. Sincronização em tempo real
-- Na agenda interna, adicionar assinatura Realtime para eventos de:
-  - `appointments`
-  - `appointment_blocks`
-  - `barbers`
-  - `services`
-- Quando qualquer evento chegar, refazer a leitura real do banco via server functions, sem depender de estado local como fonte da verdade.
-- No link público, assinar a tabela segura de eventos públicos por barbearia.
-- Quando houver mudança de agendamento, bloqueio, serviço ou barbeiro, refazer:
-  - dados públicos da barbearia
-  - horários disponíveis
-- Preservar cache apenas como mecanismo técnico de renderização, sempre com invalidação por evento e `staleTime` zero para refletir o banco.
+Bug secundário menor: `signup` mostra "Confirme seu e-mail" mas não há indicação clara do próximo passo se a confirmação por e-mail estiver desligada (o `onAuthStateChange` já redireciona, ok).
 
-5. Testes obrigatórios após implementação
-- Teste 1: cliente agenda pelo link público.
-  - Confirmar que salva no banco.
-  - Confirmar que aparece na agenda interna sem refresh manual.
-- Teste 2: barbearia cria agendamento.
-  - Confirmar que o horário desaparece do link público.
-- Teste 3: barbearia bloqueia horário.
-  - Confirmar que o horário bloqueado não aparece para clientes.
-- Teste 4: cliente tenta reservar horário já ocupado.
-  - Confirmar que o sistema bloqueia e mostra `Este horário já foi reservado.`
-- Teste 5: cancelamento/exclusão.
-  - Confirmar que o horário volta a ficar disponível.
-- Verificar console, rede, logs do backend e consultas do banco para garantir ausência de erros relacionados ao fluxo.
+## Correções
 
-Arquivos e áreas que serão alterados
-- `src/lib/public-booking.functions.ts`
-- `src/lib/appointments.functions.ts`
-- `src/lib/blocks.functions.ts`
-- `src/routes/b.$slug.tsx`
-- `src/routes/app.agenda.tsx`
-- Migração do banco para Realtime, validações, eventos seguros e proteção contra duplicidade
+### 1. `src/routes/onboarding.tsx`
+- Após `createTenant` sucesso: invalidar `["app","context"]` no `queryClient` (via `useQueryClient`) **antes** do `navigate({ to: "/app" })`.
+- Isso força o loader de `/app` a refazer `getMyContext`, agora com `currentTenant` populado.
 
-Resultado esperado
-- Agenda interna sincronizada em tempo real.
-- Link público sincronizado em tempo real.
-- Serviços e barbeiros carregando corretamente.
-- Agendamento público funcionando de ponta a ponta.
-- Horários públicos corretos: 09:00 até 20:00, de 30 em 30 minutos.
-- Bloqueios respeitados no link público.
-- Duplicidade impedida no frontend, backend e banco.
-- Fluxo pronto para produção.
+### 2. `src/routes/app.tsx` (defesa em profundidade)
+- Trocar o `useEffect` + tela "Redirecionando…" por `throw redirect({ to: "/onboarding" })` dentro do `loader`, quando `getMyContext` retornar `currentTenant === null`. Redireciona antes de renderizar — sem flash de tela e sem loop.
+- Mantém `beforeLoad` checando sessão.
+
+### 3. `src/routes/login.tsx` e `src/routes/signup.tsx`
+- Sem mudança de lógica; o redirect para `/app` continua e o loader de `/app` agora decide corretamente entre dashboard e onboarding.
+
+### 4. Verificação rápida pós-correção
+- Criar conta nova → login → deve cair em `/onboarding`.
+- Preencher e submeter → deve abrir `/app` com sidebar e dashboard, sem loop.
+- Cadastrar serviço e barbeiro → deve salvar (RLS já valida).
+
+## Arquivos alterados
+- `src/routes/onboarding.tsx` — invalidar cache de contexto antes de navegar.
+- `src/routes/app.tsx` — mover redirect para onboarding para dentro do `loader`.
+
+Nenhuma migração SQL é necessária — backend e RLS já estão corretos.

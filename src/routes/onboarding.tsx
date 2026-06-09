@@ -1,6 +1,7 @@
 import { createFileRoute, redirect, useNavigate } from "@tanstack/react-router";
 import { useState } from "react";
 import { useServerFn } from "@tanstack/react-start";
+import { useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 import { createTenant } from "@/lib/tenant.functions";
@@ -31,6 +32,7 @@ function suggestSlug(v: string) {
 function OnboardingPage() {
   const navigate = useNavigate();
   const create = useServerFn(createTenant);
+  const queryClient = useQueryClient();
   const [name, setName] = useState("");
   const [slug, setSlug] = useState("");
   const [city, setCity] = useState("");
@@ -41,6 +43,7 @@ function OnboardingPage() {
     setLoading(true);
     try {
       await create({ data: { name, slug, city } });
+      await queryClient.invalidateQueries({ queryKey: ["app", "context"] });
       toast.success("Barbearia criada!");
       navigate({ to: "/app" });
     } catch (err) {
