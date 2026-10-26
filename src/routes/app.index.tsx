@@ -11,7 +11,7 @@ export const Route = createFileRoute("/app/")({
   head: () => ({ meta: [{ title: "Dashboard — Barber360" }] }),
   loader: ({ context }) => context.queryClient.ensureQueryData(summaryQ),
   component: DashboardPage,
-  errorComponent: ({ error }) => <div className="p-6 text-sm text-destructive">{error.message}</div>,
+  errorComponent: ({ error }) => <div className="p-6 text-sm text-destructive">{error instanceof Error ? error.message : String(error)}</div>,
 });
 
 function DashboardPage() {

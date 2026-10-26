@@ -19,7 +19,7 @@ export const Route = createFileRoute("/app/configuracoes")({
   head: () => ({ meta: [{ title: "Configurações — Barber360" }] }),
   loader: ({ context }) => context.queryClient.ensureQueryData(q),
   component: SettingsPage,
-  errorComponent: ({ error }) => <div className="p-6 text-sm text-destructive">{error.message}</div>,
+  errorComponent: ({ error }) => <div className="p-6 text-sm text-destructive">{error instanceof Error ? error.message : String(error)}</div>,
 });
 
 function SettingsPage() {

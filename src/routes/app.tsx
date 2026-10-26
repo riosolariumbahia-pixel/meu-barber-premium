@@ -43,7 +43,7 @@ export const Route = createFileRoute("/app")({
     <div className="grid min-h-screen place-items-center p-6 text-center">
       <div>
         <h2 className="text-lg font-semibold">Não foi possível carregar o painel</h2>
-        <p className="mt-2 text-sm text-muted-foreground">{error.message}</p>
+        <p className="mt-2 text-sm text-muted-foreground">{error instanceof Error ? error.message : String(error)}</p>
       </div>
     </div>
   ),
