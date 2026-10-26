@@ -20,7 +20,7 @@ export const Route = createFileRoute("/app/financeiro")({
   head: () => ({ meta: [{ title: "Financeiro — Barber360" }] }),
   loader: ({ context }) => context.queryClient.ensureQueryData(summaryQ),
   component: FinancePage,
-  errorComponent: ({ error }) => <div className="p-6 text-sm text-destructive">{error.message}</div>,
+  errorComponent: ({ error }) => <div className="p-6 text-sm text-destructive">{error instanceof Error ? error.message : String(error)}</div>,
 });
 
 function FinancePage() {

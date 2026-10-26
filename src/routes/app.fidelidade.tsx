@@ -16,7 +16,7 @@ export const Route = createFileRoute("/app/fidelidade")({
   head: () => ({ meta: [{ title: "Fidelidade — Barber360" }] }),
   loader: ({ context }) => context.queryClient.ensureQueryData(q),
   component: LoyaltyPage,
-  errorComponent: ({ error }) => <div className="p-6 text-sm text-destructive">{error.message}</div>,
+  errorComponent: ({ error }) => <div className="p-6 text-sm text-destructive">{error instanceof Error ? error.message : String(error)}</div>,
 });
 
 const TIER_COLOR: Record<string, string> = {
