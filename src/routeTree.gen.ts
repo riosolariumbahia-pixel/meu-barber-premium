@@ -9,37 +9,27 @@
 // Additionally, you should also exclude this file from your linter and/or formatter to prevent it from being checked or modified.
 
 import { Route as rootRouteImport } from './routes/__root'
-import { Route as SignupRouteImport } from './routes/signup'
-import { Route as OnboardingRouteImport } from './routes/onboarding'
-import { Route as LoginRouteImport } from './routes/login'
-import { Route as AppRouteImport } from './routes/app'
 import { Route as IndexRouteImport } from './routes/index'
+import { Route as AppRouteImport } from './routes/app'
+import { Route as LoginRouteImport } from './routes/login'
+import { Route as OnboardingRouteImport } from './routes/onboarding'
+import { Route as SignupRouteImport } from './routes/signup'
 import { Route as AppIndexRouteImport } from './routes/app.index'
-import { Route as BSlugRouteImport } from './routes/b.$slug'
-import { Route as AppServicosRouteImport } from './routes/app.servicos'
-import { Route as AppFinanceiroRouteImport } from './routes/app.financeiro'
-import { Route as AppFidelidadeRouteImport } from './routes/app.fidelidade'
-import { Route as AppConfiguracoesRouteImport } from './routes/app.configuracoes'
-import { Route as AppClientesRouteImport } from './routes/app.clientes'
-import { Route as AppBarbeirosRouteImport } from './routes/app.barbeiros'
-import { Route as AppAssinaturaRouteImport } from './routes/app.assinatura'
 import { Route as AppAgendaRouteImport } from './routes/app.agenda'
+import { Route as AppAssinaturaRouteImport } from './routes/app.assinatura'
+import { Route as AppBarbeirosRouteImport } from './routes/app.barbeiros'
+import { Route as AppClientesRouteImport } from './routes/app.clientes'
+import { Route as AppConfiguracoesRouteImport } from './routes/app.configuracoes'
+import { Route as AppFidelidadeRouteImport } from './routes/app.fidelidade'
+import { Route as AppFinanceiroRouteImport } from './routes/app.financeiro'
+import { Route as AppServicosRouteImport } from './routes/app.servicos'
+import { Route as BSlugRouteImport } from './routes/b.$slug'
 import { Route as ApiPublicWhatsappRouteImport } from './routes/api.public.whatsapp'
 import { Route as ApiPublicCronRemindersRouteImport } from './routes/api.public.cron.reminders'
 
-const SignupRoute = SignupRouteImport.update({
-  id: '/signup',
-  path: '/signup',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const OnboardingRoute = OnboardingRouteImport.update({
-  id: '/onboarding',
-  path: '/onboarding',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const LoginRoute = LoginRouteImport.update({
-  id: '/login',
-  path: '/login',
+const IndexRoute = IndexRouteImport.update({
+  id: '/',
+  path: '/',
   getParentRoute: () => rootRouteImport,
 } as any)
 const AppRoute = AppRouteImport.update({
@@ -47,9 +37,19 @@ const AppRoute = AppRouteImport.update({
   path: '/app',
   getParentRoute: () => rootRouteImport,
 } as any)
-const IndexRoute = IndexRouteImport.update({
-  id: '/',
-  path: '/',
+const LoginRoute = LoginRouteImport.update({
+  id: '/login',
+  path: '/login',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const OnboardingRoute = OnboardingRouteImport.update({
+  id: '/onboarding',
+  path: '/onboarding',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const SignupRoute = SignupRouteImport.update({
+  id: '/signup',
+  path: '/signup',
   getParentRoute: () => rootRouteImport,
 } as any)
 const AppIndexRoute = AppIndexRouteImport.update({
@@ -57,39 +57,9 @@ const AppIndexRoute = AppIndexRouteImport.update({
   path: '/',
   getParentRoute: () => AppRoute,
 } as any)
-const BSlugRoute = BSlugRouteImport.update({
-  id: '/b/$slug',
-  path: '/b/$slug',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const AppServicosRoute = AppServicosRouteImport.update({
-  id: '/servicos',
-  path: '/servicos',
-  getParentRoute: () => AppRoute,
-} as any)
-const AppFinanceiroRoute = AppFinanceiroRouteImport.update({
-  id: '/financeiro',
-  path: '/financeiro',
-  getParentRoute: () => AppRoute,
-} as any)
-const AppFidelidadeRoute = AppFidelidadeRouteImport.update({
-  id: '/fidelidade',
-  path: '/fidelidade',
-  getParentRoute: () => AppRoute,
-} as any)
-const AppConfiguracoesRoute = AppConfiguracoesRouteImport.update({
-  id: '/configuracoes',
-  path: '/configuracoes',
-  getParentRoute: () => AppRoute,
-} as any)
-const AppClientesRoute = AppClientesRouteImport.update({
-  id: '/clientes',
-  path: '/clientes',
-  getParentRoute: () => AppRoute,
-} as any)
-const AppBarbeirosRoute = AppBarbeirosRouteImport.update({
-  id: '/barbeiros',
-  path: '/barbeiros',
+const AppAgendaRoute = AppAgendaRouteImport.update({
+  id: '/agenda',
+  path: '/agenda',
   getParentRoute: () => AppRoute,
 } as any)
 const AppAssinaturaRoute = AppAssinaturaRouteImport.update({
@@ -97,10 +67,40 @@ const AppAssinaturaRoute = AppAssinaturaRouteImport.update({
   path: '/assinatura',
   getParentRoute: () => AppRoute,
 } as any)
-const AppAgendaRoute = AppAgendaRouteImport.update({
-  id: '/agenda',
-  path: '/agenda',
+const AppBarbeirosRoute = AppBarbeirosRouteImport.update({
+  id: '/barbeiros',
+  path: '/barbeiros',
   getParentRoute: () => AppRoute,
+} as any)
+const AppClientesRoute = AppClientesRouteImport.update({
+  id: '/clientes',
+  path: '/clientes',
+  getParentRoute: () => AppRoute,
+} as any)
+const AppConfiguracoesRoute = AppConfiguracoesRouteImport.update({
+  id: '/configuracoes',
+  path: '/configuracoes',
+  getParentRoute: () => AppRoute,
+} as any)
+const AppFidelidadeRoute = AppFidelidadeRouteImport.update({
+  id: '/fidelidade',
+  path: '/fidelidade',
+  getParentRoute: () => AppRoute,
+} as any)
+const AppFinanceiroRoute = AppFinanceiroRouteImport.update({
+  id: '/financeiro',
+  path: '/financeiro',
+  getParentRoute: () => AppRoute,
+} as any)
+const AppServicosRoute = AppServicosRouteImport.update({
+  id: '/servicos',
+  path: '/servicos',
+  getParentRoute: () => AppRoute,
+} as any)
+const BSlugRoute = BSlugRouteImport.update({
+  id: '/b/$slug',
+  path: '/b/$slug',
+  getParentRoute: () => rootRouteImport,
 } as any)
 const ApiPublicWhatsappRoute = ApiPublicWhatsappRouteImport.update({
   id: '/api/public/whatsapp',
@@ -242,25 +242,11 @@ export interface RootRouteChildren {
 
 declare module '@tanstack/react-router' {
   interface FileRoutesByPath {
-    '/signup': {
-      id: '/signup'
-      path: '/signup'
-      fullPath: '/signup'
-      preLoaderRoute: typeof SignupRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/onboarding': {
-      id: '/onboarding'
-      path: '/onboarding'
-      fullPath: '/onboarding'
-      preLoaderRoute: typeof OnboardingRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/login': {
-      id: '/login'
-      path: '/login'
-      fullPath: '/login'
-      preLoaderRoute: typeof LoginRouteImport
+    '/': {
+      id: '/'
+      path: '/'
+      fullPath: '/'
+      preLoaderRoute: typeof IndexRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/app': {
@@ -270,11 +256,25 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AppRouteImport
       parentRoute: typeof rootRouteImport
     }
-    '/': {
-      id: '/'
-      path: '/'
-      fullPath: '/'
-      preLoaderRoute: typeof IndexRouteImport
+    '/login': {
+      id: '/login'
+      path: '/login'
+      fullPath: '/login'
+      preLoaderRoute: typeof LoginRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/onboarding': {
+      id: '/onboarding'
+      path: '/onboarding'
+      fullPath: '/onboarding'
+      preLoaderRoute: typeof OnboardingRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/signup': {
+      id: '/signup'
+      path: '/signup'
+      fullPath: '/signup'
+      preLoaderRoute: typeof SignupRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/app/': {
@@ -284,53 +284,11 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AppIndexRouteImport
       parentRoute: typeof AppRoute
     }
-    '/b/$slug': {
-      id: '/b/$slug'
-      path: '/b/$slug'
-      fullPath: '/b/$slug'
-      preLoaderRoute: typeof BSlugRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/app/servicos': {
-      id: '/app/servicos'
-      path: '/servicos'
-      fullPath: '/app/servicos'
-      preLoaderRoute: typeof AppServicosRouteImport
-      parentRoute: typeof AppRoute
-    }
-    '/app/financeiro': {
-      id: '/app/financeiro'
-      path: '/financeiro'
-      fullPath: '/app/financeiro'
-      preLoaderRoute: typeof AppFinanceiroRouteImport
-      parentRoute: typeof AppRoute
-    }
-    '/app/fidelidade': {
-      id: '/app/fidelidade'
-      path: '/fidelidade'
-      fullPath: '/app/fidelidade'
-      preLoaderRoute: typeof AppFidelidadeRouteImport
-      parentRoute: typeof AppRoute
-    }
-    '/app/configuracoes': {
-      id: '/app/configuracoes'
-      path: '/configuracoes'
-      fullPath: '/app/configuracoes'
-      preLoaderRoute: typeof AppConfiguracoesRouteImport
-      parentRoute: typeof AppRoute
-    }
-    '/app/clientes': {
-      id: '/app/clientes'
-      path: '/clientes'
-      fullPath: '/app/clientes'
-      preLoaderRoute: typeof AppClientesRouteImport
-      parentRoute: typeof AppRoute
-    }
-    '/app/barbeiros': {
-      id: '/app/barbeiros'
-      path: '/barbeiros'
-      fullPath: '/app/barbeiros'
-      preLoaderRoute: typeof AppBarbeirosRouteImport
+    '/app/agenda': {
+      id: '/app/agenda'
+      path: '/agenda'
+      fullPath: '/app/agenda'
+      preLoaderRoute: typeof AppAgendaRouteImport
       parentRoute: typeof AppRoute
     }
     '/app/assinatura': {
@@ -340,12 +298,54 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AppAssinaturaRouteImport
       parentRoute: typeof AppRoute
     }
-    '/app/agenda': {
-      id: '/app/agenda'
-      path: '/agenda'
-      fullPath: '/app/agenda'
-      preLoaderRoute: typeof AppAgendaRouteImport
+    '/app/barbeiros': {
+      id: '/app/barbeiros'
+      path: '/barbeiros'
+      fullPath: '/app/barbeiros'
+      preLoaderRoute: typeof AppBarbeirosRouteImport
       parentRoute: typeof AppRoute
+    }
+    '/app/clientes': {
+      id: '/app/clientes'
+      path: '/clientes'
+      fullPath: '/app/clientes'
+      preLoaderRoute: typeof AppClientesRouteImport
+      parentRoute: typeof AppRoute
+    }
+    '/app/configuracoes': {
+      id: '/app/configuracoes'
+      path: '/configuracoes'
+      fullPath: '/app/configuracoes'
+      preLoaderRoute: typeof AppConfiguracoesRouteImport
+      parentRoute: typeof AppRoute
+    }
+    '/app/fidelidade': {
+      id: '/app/fidelidade'
+      path: '/fidelidade'
+      fullPath: '/app/fidelidade'
+      preLoaderRoute: typeof AppFidelidadeRouteImport
+      parentRoute: typeof AppRoute
+    }
+    '/app/financeiro': {
+      id: '/app/financeiro'
+      path: '/financeiro'
+      fullPath: '/app/financeiro'
+      preLoaderRoute: typeof AppFinanceiroRouteImport
+      parentRoute: typeof AppRoute
+    }
+    '/app/servicos': {
+      id: '/app/servicos'
+      path: '/servicos'
+      fullPath: '/app/servicos'
+      preLoaderRoute: typeof AppServicosRouteImport
+      parentRoute: typeof AppRoute
+    }
+    '/b/$slug': {
+      id: '/b/$slug'
+      path: '/b/$slug'
+      fullPath: '/b/$slug'
+      preLoaderRoute: typeof BSlugRouteImport
+      parentRoute: typeof rootRouteImport
     }
     '/api/public/whatsapp': {
       id: '/api/public/whatsapp'
